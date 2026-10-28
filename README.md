@@ -84,4 +84,8 @@ npm install
 npm run dev
 ```
 
-Open the printed localhost URL, allow microphone access, and press **Record**. Auto-gain, noise suppression and echo cancellation are turned off so the scorer gets the raw signal; the "Mic processing" panel shows what the browser actually applied. Chrome and Firefox record `.webm` (Opus); Safari records `.m4a` (AAC).
+Open the printed localhost URL, allow microphone access, and press **Record**. Auto-gain, noise suppression and echo cancellation are turned off so the scorer gets the raw signal; the "Microphone" panel shows what the browser actually applied. Chrome and Firefox record `.webm` (Opus); Safari records `.m4a` (AAC).
+
+- **Calibrate:** two seconds of silence, then read one line at a normal volume. The page measures room noise and your speaking voice in LUFS and keeps them in this browser; **Download JSON** saves `calibration.json` for the scorer. Each take then shows how far its loudest 400 ms rose above your voice.
+- **Countdown:** 3-2-1, a random pause, then **BARK!** Recording starts on the cue, like a duel round. Stop during the countdown cancels.
+- **Loudest 400 ms** is K-weighted LUFS using pyloudnorm's filters and math, so it is directly comparable to loudness the scorer computes with pyloudnorm.

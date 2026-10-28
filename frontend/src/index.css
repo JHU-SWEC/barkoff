@@ -18,6 +18,8 @@
   --pill-negative-ink: #831c1e;
   --pill-warning-bg: #fffbeb;
   --pill-warning-ink: #92400e;
+  --pill-info-bg: #e8f0fb;
+  --pill-info-ink: #174a94;
 
   --radius-card: 8px;
   --radius-control: 6px;
@@ -253,8 +255,67 @@ h1 {
   color: var(--text);
 }
 
-.button-secondary:hover {
+.button-secondary:hover:not(:disabled) {
   background: #dadada;
+}
+
+.button-secondary:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Countdown: a switch beside the length control */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--control-height);
+  color: var(--muted);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.toggle input {
+  appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 32px;
+  height: 18px;
+  margin: 0;
+  border-radius: 9px;
+  background: var(--control);
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.toggle input::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffffff;
+  transition: transform 120ms ease;
+}
+
+.toggle input:checked {
+  background: var(--primary);
+}
+
+.toggle input:checked::before {
+  transform: translateX(14px);
+}
+
+.toggle input:checked + span {
+  color: var(--text);
+}
+
+.toggle input:disabled,
+.toggle input:disabled + span {
+  opacity: 0.55;
+  cursor: default;
 }
 
 .text-button {
@@ -438,6 +499,65 @@ h2 {
   font-size: var(--fs-body);
 }
 
+/* Countdown and calibration prompts sit over the trace */
+.stage {
+  position: relative;
+}
+
+.cue {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  text-align: center;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  pointer-events: none;
+}
+
+.cue:empty {
+  display: none;
+}
+
+.cue-count {
+  font-size: 96px;
+  line-height: 1;
+  font-weight: 700;
+  animation: cue-in 240ms ease-out;
+}
+
+.cue-bark {
+  font-size: 72px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--chart-3);
+  animation: cue-in 160ms ease-out;
+}
+
+.cue-line {
+  max-width: 32ch;
+  font-size: var(--fs-title);
+  line-height: 32px;
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+.cue-note {
+  color: var(--muted);
+  font-size: 15px;
+}
+
+@keyframes cue-in {
+  from {
+    opacity: 0;
+    transform: scale(1.25);
+  }
+}
+
 .error {
   display: flex;
   flex-direction: column;
@@ -530,6 +650,19 @@ code {
   white-space: nowrap;
 }
 
+/* Calibration */
+.calibration-intro {
+  max-width: 60ch;
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  margin-top: 20px;
+}
+
 .rows .row {
   display: flex;
   justify-content: space-between;
@@ -562,7 +695,12 @@ code {
   color: var(--pill-warning-ink);
 }
 
-/* Tablet and phone: one column; takes move up beside the level, the mic strip follows. */
+.pill-info {
+  background: var(--pill-info-bg);
+  color: var(--pill-info-ink);
+}
+
+/* Tablet and phone: one column; takes move up beside the level, the mic strip and calibration follow. */
 @media (max-width: 960px) {
   .layout {
     grid-template-columns: minmax(0, 1fr);
@@ -581,8 +719,12 @@ code {
     order: 2;
   }
 
-  .scoring-card {
+  .calibration-card {
     order: 3;
+  }
+
+  .scoring-card {
+    order: 4;
   }
 }
 
@@ -637,11 +779,35 @@ code {
   .take {
     min-height: 44px;
   }
+
+  .toggle {
+    height: 44px;
+  }
+
+  .cue-count {
+    font-size: 72px;
+  }
+
+  .cue-bark {
+    font-size: 56px;
+  }
+
+  .cue-line {
+    font-size: 20px;
+    line-height: 28px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .button {
+  .button,
+  .toggle input,
+  .toggle input::before {
     transition: none;
+  }
+
+  .cue-count,
+  .cue-bark {
+    animation: none;
   }
 
   .button:active:not(:disabled) {
