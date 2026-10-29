@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { LevelTrace } from './LevelTrace'
 import { LOUDEST_WINDOW_S } from './audio'
-import { formatClock, formatDb, formatKb, formatSeconds } from './format'
-import { MAX_TAKES, useBarkRecorder, type MicInfo, type Take } from './useBarkRecorder'
+import { CALIBRATION_LINE, QUIET_S, calibrationJson, type Calibration } from './calibration'
+import { formatClock, formatDb, formatDelta, formatKb, formatSeconds, formatStamp } from './format'
+import { MAX_TAKES, useBarkRecorder, type Cue, type MicInfo, type Take } from './useBarkRecorder'
 
 const LENGTHS_S = [3, 5, 10, 15]
 const QUIET_PEAK_DB = -30
@@ -11,7 +12,7 @@ function fileName(take: Take): string {
   return `bark-take-${take.id}.${take.extension}`
 }
 
-function finding(take: Take): ReactNode {
+function finding(take: Take, calibration: Calibration | null): ReactNode {
   const name = `Take ${take.id}`
   if (take.clipAtS != null) {
     return (
@@ -24,7 +25,39 @@ function finding(take: Take): ReactNode {
   if (take.peakDb < QUIET_PEAK_DB) {
     return `${name} is quiet: it peaked at ${formatDb(take.peakDb)} dBFS. Move closer or bark louder.`
   }
+  if (calibration && take.loudest) {
+    const over = take.loudest.lufs - calibration.speechLufs
+    return `${name}’s loudest ${LOUDEST_WINDOW_S * 1000} ms was ${Math.abs(over).toFixed(1)} dB ${over < 0 ? 'below' : 'above'} your speaking voice, with no clipping.`
+  }
   return `${name} peaked at ${formatDb(take.peakDb)} dBFS, ${formatSeconds(take.peakAtS, 2)} s in, with no clipping.`
+}
+
+// What the level card says over the trace: the round countdown, or the calibration step.
+function cuePrompt(cue: Cue, calibrating: boolean, elapsedS: number): ReactNode {
+  if (cue === 'bark') return <span className="cue-bark">BARK!</span>
+  if (cue === 'wait') return <span className="cue-note">Wait for it…</span>
+  if (typeof cue === 'number') {
+    return (
+      <span key={cue} className="cue-count num">
+        {cue}
+      </span>
+    )
+  }
+  if (!calibrating) return null
+  if (elapsedS < QUIET_S) {
+    return (
+      <>
+        <span className="cue-line">Stay quiet</span>
+        <span className="cue-note">Measuring the room</span>
+      </>
+    )
+  }
+  return (
+    <>
+      <span className="cue-note">Read aloud at your normal volume</span>
+      <span className="cue-line">“{CALIBRATION_LINE}”</span>
+    </>
+  )
 }
 
 function Figure({ label, value, unit, lead }: { label: string; value: string; unit?: string; lead?: boolean }) {
@@ -114,6 +147,62 @@ function MicPanel({ mic }: { mic: MicInfo | null }) {
   )
 }
 
+function CalibrationPanel({
+  calibration,
+  mic,
+  disabled,
+  onCalibrate,
+}: {
+  calibration: Calibration | null
+  mic: MicInfo | null
+  disabled: boolean
+  onCalibrate: () => void
+}) {
+  const otherMic = calibration != null && mic != null && mic.label !== calibration.device
+
+  return (
+    <section className="card calibration-card" aria-labelledby="calibration-heading">
+      <div className="card-head">
+        <h2 id="calibration-heading">Calibration</h2>
+        {otherMic ? (
+          <span className="pill pill-warning" title={`Measured on ${calibration.device || 'another input'}`}>
+            Different mic
+          </span>
+        ) : (
+          calibration && <span className="quiet mic-name">{calibration.device || 'Default input'}</span>
+        )}
+      </div>
+      {calibration ? (
+        <dl className="figures figures-small">
+          <Figure label="Room noise" value={formatDb(calibration.noiseLufs)} unit="LUFS" />
+          <Figure label="Speaking voice" value={formatDb(calibration.speechLufs)} unit="LUFS" />
+          <Figure label="Voice over room" value={formatDelta(calibration.speechLufs - calibration.noiseLufs)} unit="dB" />
+          <Figure label="Measured" value={formatStamp(new Date(calibration.measuredAt))} />
+        </dl>
+      ) : (
+        <p className="quiet calibration-intro">
+          Five seconds: stay quiet for two, then read one line at your normal volume. Takes are then measured
+          against your speaking voice, the baseline the scorer uses.
+        </p>
+      )}
+      <div className="card-actions">
+        <button className="button button-secondary" onClick={onCalibrate} disabled={disabled}>
+          {calibration ? 'Recalibrate' : 'Calibrate 5 s'}
+        </button>
+        {calibration && (
+          <a
+            className="button button-secondary"
+            href={`data:application/json;charset=utf-8,${encodeURIComponent(calibrationJson(calibration))}`}
+            download="calibration.json"
+          >
+            Download JSON
+          </a>
+        )}
+      </div>
+    </section>
+  )
+}
+
 function ScoringPanel({ take }: { take: Take | null }) {
   const file = take ? fileName(take) : 'bark.webm'
   return (
@@ -170,6 +259,7 @@ function TakesPanel({
               >
                 <span className="take-name">
                   Take {take.id}
+                  {take.round && <span className="pill pill-info">Round</span>}
                   {take.clipAtS != null && <span className="pill pill-negative">Clipped</span>}
                 </span>
                 <span className="take-time num">{formatClock(take.recordedAt)}</span>
@@ -187,25 +277,46 @@ function TakesPanel({
 
 function App() {
   const [lengthS, setLengthS] = useState(5)
+  const [countdown, setCountdown] = useState(false)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
-  const { status, error, takes, live, mic, start, stop } = useBarkRecorder(lengthS)
+  const { status, plan, cue, error, takes, live, mic, calibration, record: recordTake, calibrate, stop } =
+    useBarkRecorder()
   const cursorS = usePlaybackCursor(audio)
 
-  const recording = status === 'recording'
+  const capturing = status === 'countdown' || status === 'recording'
+  const calibrating = capturing && plan?.kind === 'calibration'
   const busy = status === 'requesting' || status === 'analysing'
   const take = takes.find((t) => t.id === selectedId) ?? takes[0] ?? null
+  const captureS = plan?.lengthS ?? lengthS
 
   const record = () => {
     setSelectedId(null)
-    void start()
+    void recordTake(lengthS, countdown)
   }
+  const startCalibration = () => void calibrate()
 
   let subline: ReactNode = null
   if (status === 'requesting') subline = 'Waiting for microphone permission.'
-  else if (recording) subline = `Recording. Bark now; it stops on its own at ${lengthS} s.`
-  else if (status === 'analysing') subline = 'Measuring the take.'
-  else if (take) subline = finding(take)
+  else if (status === 'countdown') subline = 'Get ready. Bark the moment you see BARK!'
+  else if (calibrating) {
+    subline = live.elapsedS < QUIET_S ? 'Calibrating. Stay quiet for a moment.' : 'Now read the line aloud.'
+  } else if (status === 'recording') {
+    subline = plan?.countdown
+      ? `Bark! The window closes at ${captureS} s.`
+      : `Recording. Bark now; it stops on its own at ${captureS} s.`
+  } else if (status === 'analysing') {
+    subline = plan?.kind === 'calibration' ? 'Measuring your calibration.' : 'Measuring the take.'
+  } else if (take) subline = finding(take, calibration)
+  else if (calibration && plan?.kind === 'calibration') {
+    subline = 'Calibrated. Record a bark to see how far it rises above your voice.'
+  }
+
+  let buttonLabel = `Record ${lengthS} s`
+  if (calibrating) buttonLabel = 'Calibrating…'
+  else if (status === 'countdown') buttonLabel = 'Cancel'
+  else if (status === 'recording') buttonLabel = 'Stop'
+  else if (status === 'requesting') buttonLabel = 'Opening mic…'
 
   return (
     <>
@@ -231,7 +342,7 @@ function App() {
           </div>
 
           <div className="actions">
-            <fieldset className="segmented" disabled={recording || busy}>
+            <fieldset className="segmented" disabled={capturing || busy}>
               <legend className="visually-hidden">Take length</legend>
               {LENGTHS_S.map((s) => (
                 <label key={s}>
@@ -246,12 +357,22 @@ function App() {
                 </label>
               ))}
             </fieldset>
+            <label className="toggle" title="3-2-1, then bark on the BARK! cue, like a duel round">
+              <input
+                type="checkbox"
+                role="switch"
+                checked={countdown}
+                onChange={(e) => setCountdown(e.target.checked)}
+                disabled={capturing || busy}
+              />
+              <span>Countdown</span>
+            </label>
             <button
               className="button button-primary"
-              onClick={recording ? stop : record}
-              disabled={busy}
+              onClick={capturing ? stop : record}
+              disabled={busy || calibrating}
             >
-              {recording ? 'Stop' : status === 'requesting' ? 'Opening mic…' : `Record ${lengthS} s`}
+              {buttonLabel}
             </button>
           </div>
         </div>
@@ -261,28 +382,34 @@ function App() {
           <div className="main">
             <section className="card level-card" aria-labelledby="level-heading">
               <div className="card-head">
-                <h2 id="level-heading">{recording ? 'Live level' : take ? `Take ${take.id} level` : 'Level'}</h2>
+                <h2 id="level-heading">
+                  {calibrating ? 'Calibration' : capturing ? 'Live level' : take ? `Take ${take.id} level` : 'Level'}
+                </h2>
               </div>
 
               <dl className="figures">
-                {recording ? (
+                {capturing ? (
                   <>
                     <Figure lead label="Level now" value={formatDb(live.levelDb)} unit="dBFS" />
                     <Figure label="Peak so far" value={formatDb(live.peakDb)} unit="dBFS" />
-                    <Figure label="Time left" value={formatSeconds(Math.max(0, lengthS - live.elapsedS))} unit="s" />
-                    <Figure label="Length" value={formatSeconds(lengthS, 2)} unit="s" />
+                    <Figure label="Time left" value={formatSeconds(Math.max(0, captureS - live.elapsedS))} unit="s" />
+                    <Figure label="Length" value={formatSeconds(captureS, 2)} unit="s" />
                   </>
                 ) : (
                   <>
                     <Figure
                       lead
                       label={`Loudest ${LOUDEST_WINDOW_S * 1000} ms`}
-                      value={take?.loudest ? formatDb(take.loudest.db) : '—'}
-                      unit="dBFS"
+                      value={take?.loudest ? formatDb(take.loudest.lufs) : '—'}
+                      unit="LUFS"
+                    />
+                    <Figure
+                      label="Above your voice"
+                      value={take?.loudest && calibration ? formatDelta(take.loudest.lufs - calibration.speechLufs) : '—'}
+                      unit="dB"
                     />
                     <Figure label="Peak" value={take ? formatDb(take.peakDb) : '—'} unit="dBFS" />
                     <Figure label="Length" value={take ? formatSeconds(take.durationS, 2) : '—'} unit="s" />
-                    <Figure label="File" value={take ? formatKb(take.blob.size) : '—'} unit="KB" />
                   </>
                 )}
               </dl>
@@ -290,33 +417,46 @@ function App() {
               {error ? (
                 <div className="error" role="alert">
                   <p>{error}</p>
-                  <button className="text-button" onClick={record}>
+                  <button className="text-button" onClick={plan?.kind === 'calibration' ? startCalibration : record}>
                     Try again
                   </button>
                 </div>
               ) : (
-                <LevelTrace
-                  points={recording ? live.trace : (take?.trace ?? [])}
-                  durationS={recording ? lengthS : (take?.durationS ?? lengthS)}
-                  loudest={recording ? null : take?.loudest}
-                  cursorS={recording ? null : cursorS}
-                  emptyText={recording ? undefined : 'No take yet. Press Record and bark.'}
-                />
+                <div className="stage">
+                  <LevelTrace
+                    points={capturing ? live.trace : (take?.trace ?? [])}
+                    durationS={capturing ? captureS : (take?.durationS ?? lengthS)}
+                    loudest={capturing ? null : take?.loudest}
+                    cursorS={capturing ? null : cursorS}
+                    emptyText={capturing ? undefined : 'No take yet. Press Record and bark.'}
+                  />
+                  <div className="cue" aria-live="assertive">
+                    {cuePrompt(cue, calibrating, live.elapsedS)}
+                  </div>
+                </div>
               )}
 
-              {take && !recording && (
+              {take && !capturing && (
                 <div className="player">
                   <audio key={take.id} ref={setAudio} controls src={take.url} />
                   <div className="player-actions">
                     <a className="button button-secondary" href={take.url} download={fileName(take)}>
                       Download {take.extension}
                     </a>
-                    <span className="quiet">{fileName(take)}</span>
+                    <span className="quiet num">
+                      {fileName(take)} · {formatKb(take.blob.size)} KB
+                    </span>
                   </div>
                 </div>
               )}
             </section>
             <MicPanel mic={mic} />
+            <CalibrationPanel
+              calibration={calibration}
+              mic={mic}
+              disabled={capturing || busy}
+              onCalibrate={startCalibration}
+            />
           </div>
 
           <div className="rail">

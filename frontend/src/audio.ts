@@ -1,8 +1,10 @@
-// Level analysis for a recorded take. Everything is in dBFS (0 = full scale).
+import { kWeight, powerToLufs } from './loudness'
+
+// Level analysis for a recorded take. The trace and peak are in dBFS (0 = full scale);
+// the loudest window is K-weighted LUFS, the scorer's loudness measure.
 
 export const FLOOR_DB = -60
-// The scorer measures short-term loudness over 400 ms, so we mark the same window here.
-// This is plain RMS, not K-weighted LUFS: close enough to see which part of the take counts.
+// The scorer measures short-term loudness over 400 ms, so we find the same window here.
 export const LOUDEST_WINDOW_S = 0.4
 const HOP_S = 0.02
 const CLIP_THRESHOLD = 0.99
@@ -15,7 +17,7 @@ export interface LevelPoint {
 export interface LoudestWindow {
   start: number
   end: number
-  db: number
+  lufs: number
 }
 
 export interface Analysis {
@@ -38,9 +40,11 @@ function powerToDb(power: number): number {
 export function analyse(buffer: AudioBuffer): Analysis {
   const samples = buffer.getChannelData(0)
   const rate = buffer.sampleRate
+  const weighted = kWeight(samples, rate)
   const hop = Math.max(1, Math.round(HOP_S * rate))
   const hops = Math.ceil(samples.length / hop)
   const meanSquares = new Float64Array(hops)
+  const weightedMeanSquares = new Float64Array(hops)
 
   let peak = 0
   let peakIndex = 0
@@ -50,10 +54,12 @@ export function analyse(buffer: AudioBuffer): Analysis {
     const from = h * hop
     const to = Math.min(samples.length, from + hop)
     let sum = 0
+    let weightedSum = 0
     for (let i = from; i < to; i++) {
       const s = samples[i]
       const abs = Math.abs(s)
       sum += s * s
+      weightedSum += weighted[i] * weighted[i]
       if (abs > peak) {
         peak = abs
         peakIndex = i
@@ -61,6 +67,7 @@ export function analyse(buffer: AudioBuffer): Analysis {
       if (clipIndex < 0 && abs >= CLIP_THRESHOLD) clipIndex = i
     }
     meanSquares[h] = sum / (to - from)
+    weightedMeanSquares[h] = weightedSum / (to - from)
   }
 
   const trace = Array.from(meanSquares, (ms, h) => ({
@@ -68,16 +75,16 @@ export function analyse(buffer: AudioBuffer): Analysis {
     db: Math.max(FLOOR_DB, powerToDb(ms)),
   }))
 
-  // Sliding mean of power over the window; a take shorter than the window is one window.
+  // Sliding mean of K-weighted power over the window; a take shorter than the window is one window.
   const span = Math.min(hops, Math.round(LOUDEST_WINDOW_S / HOP_S))
   let loudest: LoudestWindow | null = null
   if (span > 0) {
     let sum = 0
-    for (let h = 0; h < span; h++) sum += meanSquares[h]
+    for (let h = 0; h < span; h++) sum += weightedMeanSquares[h]
     let best = sum
     let bestStart = 0
     for (let h = span; h < hops; h++) {
-      sum += meanSquares[h] - meanSquares[h - span]
+      sum += weightedMeanSquares[h] - weightedMeanSquares[h - span]
       if (sum > best) {
         best = sum
         bestStart = h - span + 1
@@ -86,7 +93,7 @@ export function analyse(buffer: AudioBuffer): Analysis {
     loudest = {
       start: (bestStart * hop) / rate,
       end: Math.min(buffer.duration, ((bestStart + span) * hop) / rate),
-      db: powerToDb(best / span),
+      lufs: powerToLufs(best / span),
     }
   }
 

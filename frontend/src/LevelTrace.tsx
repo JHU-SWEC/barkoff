@@ -48,11 +48,11 @@ export function LevelTrace({ points, durationS, loudest, cursorS, emptyText }: P
   const secondTicks: number[] = []
   for (let t = 0; t <= domain + 1e-6; t += step) secondTicks.push(t)
 
-  const loudestLabel = loudest && `Loudest ${LOUDEST_WINDOW_S * 1000} ms · ${formatDb(loudest.db)} dB`
+  const loudestLabel = loudest && `Loudest ${LOUDEST_WINDOW_S * 1000} ms · ${formatDb(loudest.lufs)} LUFS`
   const labelAtEnd = loudest && x(loudest.start) > MARGIN.left + plotW * 0.6
 
   const summary = loudest
-    ? `Level over ${domain.toFixed(1)} seconds; loudest ${LOUDEST_WINDOW_S * 1000} ms from ${loudest.start.toFixed(2)} s at ${formatDb(loudest.db)} dBFS`
+    ? `Level over ${domain.toFixed(1)} seconds; loudest ${LOUDEST_WINDOW_S * 1000} ms from ${loudest.start.toFixed(2)} s at ${formatDb(loudest.lufs)} LUFS`
     : `Level over ${domain.toFixed(1)} seconds`
 
   return (
