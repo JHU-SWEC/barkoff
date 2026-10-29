@@ -814,3 +814,17 @@ code {
     transform: none;
   }
 }
+
+/* Likeness: bark probability from the local YAMNet server */
+.likeness-top {
+  margin-top: 12px;
+}
+
+.likeness-top dd {
+  text-align: right;
+}
+
+.likeness-error {
+  padding-left: 12px;
+  border-left: 2px solid var(--negative);
+}

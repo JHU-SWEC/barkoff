@@ -3,6 +3,7 @@ import { LevelTrace } from './LevelTrace'
 import { LOUDEST_WINDOW_S } from './audio'
 import { CALIBRATION_LINE, QUIET_S, calibrationJson, type Calibration } from './calibration'
 import { formatClock, formatDb, formatDelta, formatKb, formatSeconds, formatStamp } from './format'
+import { scoreLikeness, type LikenessResult } from './likeness'
 import { MAX_TAKES, useBarkRecorder, type Cue, type MicInfo, type Take } from './useBarkRecorder'
 
 const LENGTHS_S = [3, 5, 10, 15]
@@ -198,6 +199,68 @@ function CalibrationPanel({
             Download JSON
           </a>
         )}
+      </div>
+    </section>
+  )
+}
+
+type LikenessState = { status: 'scoring' } | { status: 'done'; result: LikenessResult } | { status: 'error'; message: string }
+
+function LikenessPanel({ take, disabled }: { take: Take | null; disabled: boolean }) {
+  // Results per take id, so switching takes keeps earlier scores.
+  const [byTake, setByTake] = useState<Record<number, LikenessState>>({})
+  const state = take ? byTake[take.id] : undefined
+
+  const run = async () => {
+    if (!take) return
+    const id = take.id
+    setByTake((prev) => ({ ...prev, [id]: { status: 'scoring' } }))
+    try {
+      const result = await scoreLikeness(take.blob)
+      setByTake((prev) => ({ ...prev, [id]: { status: 'done', result } }))
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Scoring failed.'
+      setByTake((prev) => ({ ...prev, [id]: { status: 'error', message } }))
+    }
+  }
+
+  return (
+    <section className="card likeness-card" aria-labelledby="likeness-heading">
+      <div className="card-head">
+        <h2 id="likeness-heading">Likeness</h2>
+        {take && <span className="quiet">Take {take.id}</span>}
+      </div>
+      {state?.status === 'done' ? (
+        <>
+          <dl className="figures figures-small">
+            <Figure lead label="Bark probability" value={state.result.probability.toFixed(2)} />
+          </dl>
+          <dl className="rows likeness-top">
+            {state.result.top.map((c) => (
+              <div className="row" key={c.name}>
+                <dt>{c.name}</dt>
+                <dd className="num">{c.score.toFixed(3)}</dd>
+              </div>
+            ))}
+          </dl>
+        </>
+      ) : state?.status === 'error' ? (
+        <p className="likeness-error" role="alert">
+          {state.message}
+        </p>
+      ) : (
+        <p className="quiet">
+          {take ? 'Score this take with the YAMNet dog classifier.' : 'Record a take to score it.'}
+        </p>
+      )}
+      <div className="card-actions">
+        <button
+          className="button button-secondary"
+          onClick={() => void run()}
+          disabled={!take || disabled || state?.status === 'scoring'}
+        >
+          {state?.status === 'scoring' ? 'Scoring…' : state ? 'Score again' : 'Score likeness'}
+        </button>
       </div>
     </section>
   )
@@ -461,6 +524,7 @@ function App() {
 
           <div className="rail">
             <TakesPanel takes={takes} selectedId={take?.id ?? null} onSelect={setSelectedId} />
+            <LikenessPanel take={take} disabled={capturing || busy} />
             <ScoringPanel take={take} />
           </div>
         </div>

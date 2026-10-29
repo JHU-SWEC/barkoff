@@ -81,3 +81,18 @@ ffmpeg -f lavfi -i "sine=frequency=440:duration=3" -c:a libopus sine.webm
 
 Expected results: a sine wave or silence gives about 0.0, a real dog bark
 gives about 0.9.
+
+## Score takes from the frontend
+
+`server.py` exposes `bark_probability` over HTTP so the recorder page can
+score a take with the **Score likeness** button:
+
+```bash
+cd backend
+source .venv/bin/activate
+python server.py            # http://localhost:8000
+```
+
+Then run the frontend with `npm run dev`; Vite proxies `/api` to port 8000.
+The browser decodes the take and sends 16 kHz mono float32 samples, so this
+path does not need FFmpeg.
