@@ -1,0 +1,650 @@
+/* Achromatic ledger: ink chrome, one chart hue on the level trace, a blue-grey meter ground. */
+:root {
+  --ground: #f2f4f7;
+  --surface: #ffffff;
+  --raised: #eeeeee;
+  --border: #e6e6e6;
+  --rule: #f0f0f0;
+  --control: #d4d4d4;
+  --text: #0a0a0a;
+  --muted: #6b6b6b;
+  --primary: #141414;
+  --secondary: #e5e5e5;
+  --negative: #c4242a;
+  --chart-1: #141414;
+  --chart-3: #1d5fbf;
+  --grid: #e5e5e5;
+  --pill-negative-bg: #ffedea;
+  --pill-negative-ink: #831c1e;
+  --pill-warning-bg: #fffbeb;
+  --pill-warning-ink: #92400e;
+
+  --radius-card: 8px;
+  --radius-control: 6px;
+  --radius-chip: 4px;
+  --gap: 12px;
+  --pad: 24px;
+  --control-height: 36px;
+  --fs-title: 24px;
+  --fs-section: 16px;
+  --fs-kpi: 30px;
+  --fs-body: 14px;
+  --fs-small: 12px;
+  --font: 'Geist', Inter, system-ui, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, monospace;
+
+  font-family: var(--font);
+  font-size: var(--fs-body);
+  line-height: 20px;
+  color: var(--text);
+  background: var(--ground);
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+}
+
+h1,
+h2,
+p,
+dl,
+dd,
+ul,
+fieldset {
+  margin: 0;
+  padding: 0;
+}
+
+ul {
+  list-style: none;
+}
+
+fieldset {
+  border: 0;
+  min-width: 0;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--chart-3);
+  outline-offset: 2px;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Shell: no sidebar. A 48px bar over a centred 1100px column (1148 minus 24px gutters). */
+.column {
+  max-width: 1148px;
+  margin: 0 auto;
+  padding: 0 var(--pad);
+}
+
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 48px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 15px;
+  text-decoration: none;
+}
+
+.mark {
+  width: 22px;
+  height: 22px;
+  fill: var(--primary);
+}
+
+.mark-eye {
+  fill: var(--ground);
+}
+
+/* Canvas */
+.canvas {
+  padding-top: 32px;
+  padding-bottom: 48px;
+}
+
+.title-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+h1 {
+  font-size: var(--fs-title);
+  line-height: 32px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.subline:empty {
+  display: none;
+}
+
+.subline {
+  margin-top: 4px;
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  flex-shrink: 0;
+}
+
+/* Length: one segmented control on a grey track */
+.segmented {
+  display: flex;
+  padding: 2px;
+  border-radius: var(--radius-control);
+  background: var(--raised);
+}
+
+.segmented label {
+  position: relative;
+}
+
+.segmented input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.segmented span {
+  display: block;
+  padding: 0 12px;
+  line-height: calc(var(--control-height) - 4px);
+  border-radius: 4px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.segmented input:checked + span {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.segmented input:focus-visible + span {
+  outline: 2px solid var(--chart-3);
+  outline-offset: 0;
+}
+
+.segmented:disabled span {
+  opacity: 0.55;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--control-height);
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-control);
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    transform 80ms ease;
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.button-primary {
+  min-width: 112px;
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.button-primary:hover:not(:disabled) {
+  background: #2e2e2e;
+}
+
+.button-primary:disabled {
+  background: #6b6b6b;
+  cursor: default;
+}
+
+.button-secondary {
+  background: var(--secondary);
+  color: var(--text);
+}
+
+.button-secondary:hover {
+  background: #dadada;
+}
+
+.text-button {
+  border: 0;
+  padding: 0;
+  background: none;
+  font-weight: 500;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Grid: main column and rail */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--gap);
+  align-items: start;
+}
+
+.main,
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--pad);
+}
+
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.card-head:last-child {
+  margin-bottom: 0;
+}
+
+h2 {
+  font-size: var(--fs-section);
+  line-height: 24px;
+  font-weight: 500;
+}
+
+.card > h2 {
+  margin-bottom: 16px;
+}
+
+.quiet {
+  color: var(--muted);
+}
+
+.missing {
+  color: var(--muted);
+}
+
+/* A missing figure is a small grey dash, never a value-sized one that reads as loading. */
+.figure dd.missing {
+  font-size: var(--fs-section);
+  font-weight: 400;
+}
+
+.scoring {
+  margin-top: 12px;
+}
+
+.scoring dd {
+  text-align: right;
+}
+
+.card > p code {
+  white-space: nowrap;
+}
+
+/* Figures: one strip split by dividers, the lead figure largest */
+.figures {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  margin-bottom: 20px;
+}
+
+.figure {
+  padding: 0 16px;
+  border-left: 1px solid var(--border);
+}
+
+.figure:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.figure dt {
+  color: var(--muted);
+  font-size: var(--fs-small);
+  line-height: 16px;
+}
+
+.figure dd {
+  margin-top: 6px;
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 500;
+}
+
+.figures-small {
+  margin-bottom: 0;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.figures-small .figure dd {
+  font-size: var(--fs-body);
+  line-height: 20px;
+  margin-top: 4px;
+}
+
+.figure-lead dd {
+  font-size: var(--fs-kpi);
+  line-height: 36px;
+  margin-top: 2px;
+}
+
+.unit {
+  color: var(--muted);
+  font-size: var(--fs-small);
+  font-weight: 400;
+}
+
+/* Level trace */
+.trace {
+  width: 100%;
+}
+
+.trace svg {
+  display: block;
+  overflow: visible;
+}
+
+.trace-grid {
+  stroke: var(--grid);
+  stroke-dasharray: 2 3;
+}
+
+.trace-tick {
+  fill: var(--muted);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.trace-line {
+  fill: none;
+  stroke: var(--chart-3);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.trace-span {
+  fill: var(--chart-3);
+  opacity: 0.1;
+}
+
+.trace-note {
+  fill: var(--text);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+
+.trace-cursor {
+  stroke: var(--chart-1);
+  stroke-width: 1;
+}
+
+.trace-empty {
+  fill: var(--muted);
+  font-size: var(--fs-body);
+}
+
+.error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+  min-height: 188px;
+  padding: 0 0 0 16px;
+  border-left: 2px solid var(--negative);
+}
+
+/* Player */
+.player {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.player audio {
+  width: 100%;
+  height: 40px;
+}
+
+.player-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+code {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--raised);
+  padding: 2px 6px;
+  border-radius: var(--radius-chip);
+}
+
+/* Takes */
+.takes {
+  margin: 0 -12px;
+}
+
+.take {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.take:hover {
+  background: #f6f6f6;
+}
+
+.take[aria-pressed='true'] {
+  background: var(--raised);
+}
+
+.take-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.take-time {
+  color: var(--muted);
+  text-align: right;
+}
+
+.take-meta {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Microphone */
+.mic-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rows .row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 40px;
+  border-top: 1px solid var(--rule);
+}
+
+.rows dt {
+  color: var(--muted);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: var(--radius-chip);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+
+.pill-negative {
+  background: var(--pill-negative-bg);
+  color: var(--pill-negative-ink);
+}
+
+.pill-warning {
+  background: var(--pill-warning-bg);
+  color: var(--pill-warning-ink);
+}
+
+/* Tablet and phone: one column; takes move up beside the level, the mic strip follows. */
+@media (max-width: 960px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .main,
+  .rail {
+    display: contents;
+  }
+
+  .takes-card {
+    order: 1;
+  }
+
+  .mic-card {
+    order: 2;
+  }
+
+  .scoring-card {
+    order: 3;
+  }
+}
+
+/* Phone */
+@media (max-width: 640px) {
+  :root {
+    --pad: 16px;
+  }
+
+  .canvas {
+    padding-top: 20px;
+  }
+
+  .title-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .segmented label {
+    flex: 1;
+    text-align: center;
+  }
+
+  .segmented span {
+    line-height: 40px;
+  }
+
+  .button {
+    height: 44px;
+  }
+
+  .figures {
+    grid-template-columns: 1fr 1fr;
+    row-gap: 16px;
+  }
+
+  .card-head {
+    flex-wrap: wrap;
+  }
+
+  .figure:nth-child(3) {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .take {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+
+  .button:active:not(:disabled) {
+    transform: none;
+  }
+}
