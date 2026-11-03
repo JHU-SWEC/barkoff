@@ -1,10 +1,11 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { LevelTrace } from './LevelTrace'
 import { LOUDEST_WINDOW_S } from './audio'
 import { CALIBRATION_LINE, QUIET_S, calibrationJson, type Calibration } from './calibration'
 import { formatClock, formatDb, formatDelta, formatKb, formatSeconds, formatStamp } from './format'
-import { scoreLikeness, type LikenessResult } from './likeness'
+import { scoreTake, type ScoreResult } from './score'
 import { MAX_TAKES, useBarkRecorder, type Cue, type MicInfo, type Take } from './useBarkRecorder'
+import { judgeTake, useHeadGuide, type CameraStatus, type Fit, type PositionCheck, type Verdict } from './useHeadGuide'
 
 const LENGTHS_S = [3, 5, 10, 15]
 const QUIET_PEAK_DB = -30
@@ -13,8 +14,16 @@ function fileName(take: Take): string {
   return `bark-take-${take.id}.${take.extension}`
 }
 
-function finding(take: Take, calibration: Calibration | null): ReactNode {
+function finding(take: Take, calibration: Calibration | null, verdict: Verdict): ReactNode {
   const name = `Take ${take.id}`
+  if (!verdict.ok && verdict.reason !== 'unchecked') {
+    return (
+      <>
+        <span className="pill pill-negative">{verdict.reason === 'close' ? 'Too close' : 'Off camera'}</span> {name}:{' '}
+        {verdict.message}
+      </>
+    )
+  }
   if (take.clipAtS != null) {
     return (
       <>
@@ -204,11 +213,90 @@ function CalibrationPanel({
   )
 }
 
-type LikenessState = { status: 'scoring' } | { status: 'done'; result: LikenessResult } | { status: 'error'; message: string }
+const FIT_PROMPT: Record<Fit, string> = {
+  none: 'Can’t see your face',
+  close: 'Too close. Sit back from the mic',
+  far: 'Too far. Come a little closer',
+  'off-centre': 'Move into the middle of the outline',
+  ok: 'In position',
+}
 
-function LikenessPanel({ take, disabled }: { take: Take | null; disabled: boolean }) {
+function CameraPanel({
+  status,
+  error,
+  fit,
+  attachVideo,
+  onStart,
+  onStop,
+  disabled,
+}: {
+  status: CameraStatus
+  error: string | null
+  fit: Fit
+  attachVideo: (el: HTMLVideoElement | null) => void
+  onStart: () => void
+  onStop: () => void
+  disabled: boolean
+}) {
+  const on = status === 'on'
+  return (
+    <section className="card camera-card" aria-labelledby="camera-heading">
+      <div className="card-head">
+        <h2 id="camera-heading">Position</h2>
+      </div>
+      <div className="camera" data-fit={on ? fit : 'off'}>
+        {on && <video ref={attachVideo} muted playsInline aria-label="Your camera" />}
+        {/* Head and shoulders: the head fits a face at the target distance (see useHeadGuide). */}
+        <svg className="camera-outline" viewBox="0 0 400 300" preserveAspectRatio="none" aria-hidden="true">
+          <ellipse cx="200" cy="118" rx="58" ry="74" />
+          <path d="M174 186c0 14-4 26-22 33-60 18-104 34-128 81M226 186c0 14 4 26 22 33 60 18 104 34 128 81" />
+        </svg>
+        <p className="camera-prompt" aria-live="polite">
+          {on
+            ? FIT_PROMPT[fit]
+            : status === 'starting'
+              ? 'Starting the camera…'
+              : 'Camera is off'}
+        </p>
+      </div>
+      {error ? (
+        <p className="score-error camera-note" role="alert">
+          {error}
+        </p>
+      ) : (
+        <p className="quiet camera-note">
+          Keep your head and shoulders in the outline while you bark. Takes recorded too close to the mic can’t be
+          scored. Video never leaves this browser.
+        </p>
+      )}
+      <div className="card-actions">
+        <button
+          className="button button-secondary"
+          onClick={on ? onStop : onStart}
+          disabled={disabled || status === 'starting'}
+        >
+          {on ? 'Turn off camera' : 'Turn on camera'}
+        </button>
+      </div>
+    </section>
+  )
+}
+
+type ScoreState = { status: 'scoring' } | { status: 'done'; result: ScoreResult } | { status: 'error'; message: string }
+
+function ScorePanel({
+  take,
+  calibration,
+  verdict,
+  disabled,
+}: {
+  take: Take | null
+  calibration: Calibration | null
+  verdict: Verdict
+  disabled: boolean
+}) {
   // Results per take id, so switching takes keeps earlier scores.
-  const [byTake, setByTake] = useState<Record<number, LikenessState>>({})
+  const [byTake, setByTake] = useState<Record<number, ScoreState>>({})
   const state = take ? byTake[take.id] : undefined
 
   const run = async () => {
@@ -216,7 +304,7 @@ function LikenessPanel({ take, disabled }: { take: Take | null; disabled: boolea
     const id = take.id
     setByTake((prev) => ({ ...prev, [id]: { status: 'scoring' } }))
     try {
-      const result = await scoreLikeness(take.blob)
+      const result = await scoreTake(take.blob, calibration)
       setByTake((prev) => ({ ...prev, [id]: { status: 'done', result } }))
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Scoring failed.'
@@ -224,19 +312,27 @@ function LikenessPanel({ take, disabled }: { take: Take | null; disabled: boolea
     }
   }
 
+  const result = state?.status === 'done' ? state.result : null
   return (
-    <section className="card likeness-card" aria-labelledby="likeness-heading">
+    <section className="card score-card" aria-labelledby="score-heading">
       <div className="card-head">
-        <h2 id="likeness-heading">Likeness</h2>
+        <h2 id="score-heading">Score</h2>
         {take && <span className="quiet">Take {take.id}</span>}
       </div>
-      {state?.status === 'done' ? (
+      {result && verdict.ok ? (
         <>
           <dl className="figures figures-small">
-            <Figure lead label="Bark probability" value={state.result.probability.toFixed(2)} />
+            <Figure lead label="Score" value={result.score.toFixed(2)} />
+            <Figure label="Loudness" value={result.loudness.toFixed(2)} />
+            <Figure label="Likeness" value={result.likeness.toFixed(2)} />
           </dl>
-          <dl className="rows likeness-top">
-            {state.result.top.map((c) => (
+          <p className="quiet score-detail">
+            Loudest 400 ms <span className="num">{formatDb(result.loudness_lufs)} LUFS</span>,{' '}
+            <span className="num">{formatDelta(result.over_speech_lu)} LU</span> over{' '}
+            {result.calibrated ? 'your speaking voice' : 'a typical speaking voice (calibrate for yours)'}
+          </p>
+          <dl className="rows score-top">
+            {result.top.map((c) => (
               <div className="row" key={c.name}>
                 <dt>{c.name}</dt>
                 <dd className="num">{c.score.toFixed(3)}</dd>
@@ -244,22 +340,24 @@ function LikenessPanel({ take, disabled }: { take: Take | null; disabled: boolea
             ))}
           </dl>
         </>
+      ) : take && !verdict.ok ? (
+        <p className="score-error">{verdict.message}</p>
       ) : state?.status === 'error' ? (
-        <p className="likeness-error" role="alert">
+        <p className="score-error" role="alert">
           {state.message}
         </p>
       ) : (
         <p className="quiet">
-          {take ? 'Score this take with the YAMNet dog classifier.' : 'Record a take to score it.'}
+          {take ? 'Score this take for loudness and dog-likeness.' : 'Record a take to score it.'}
         </p>
       )}
       <div className="card-actions">
         <button
           className="button button-secondary"
           onClick={() => void run()}
-          disabled={!take || disabled || state?.status === 'scoring'}
+          disabled={!take || !verdict.ok || disabled || state?.status === 'scoring'}
         >
-          {state?.status === 'scoring' ? 'Scoring…' : state ? 'Score again' : 'Score likeness'}
+          {state?.status === 'scoring' ? 'Scoring…' : state ? 'Score again' : 'Score take'}
         </button>
       </div>
     </section>
@@ -285,7 +383,7 @@ function ScoringPanel({ take }: { take: Take | null }) {
         </div>
         <div className="row">
           <dt>Score</dt>
-          <dd className="num">0.7 × loudness + 0.3 × likeness</dd>
+          <dd className="num">0.2 × loudness + 0.8 × likeness</dd>
         </div>
       </dl>
     </section>
@@ -294,10 +392,12 @@ function ScoringPanel({ take }: { take: Take | null }) {
 
 function TakesPanel({
   takes,
+  checks,
   selectedId,
   onSelect,
 }: {
   takes: Take[]
+  checks: Record<number, PositionCheck>
   selectedId: number | null
   onSelect: (id: number) => void
 }) {
@@ -313,7 +413,9 @@ function TakesPanel({
       </div>
       {takes.length ? (
         <ul className="takes">
-          {takes.map((take) => (
+          {takes.map((take) => {
+            const verdict = judgeTake(checks[take.id])
+            return (
             <li key={take.id}>
               <button
                 className="take"
@@ -324,6 +426,11 @@ function TakesPanel({
                   Take {take.id}
                   {take.round && <span className="pill pill-info">Round</span>}
                   {take.clipAtS != null && <span className="pill pill-negative">Clipped</span>}
+                  {!verdict.ok && (
+                    <span className={verdict.reason === 'unchecked' ? 'pill pill-warning' : 'pill pill-negative'}>
+                      {verdict.reason === 'unchecked' ? 'No camera' : verdict.reason === 'close' ? 'Too close' : 'Off camera'}
+                    </span>
+                  )}
                 </span>
                 <span className="take-time num">{formatClock(take.recordedAt)}</span>
                 <span className="take-meta num">
@@ -331,7 +438,8 @@ function TakesPanel({
                 </span>
               </button>
             </li>
-          ))}
+            )
+          })}
         </ul>
       ) : null}
     </section>
@@ -346,12 +454,35 @@ function App() {
   const { status, plan, cue, error, takes, live, mic, calibration, record: recordTake, calibrate, stop } =
     useBarkRecorder()
   const cursorS = usePlaybackCursor(audio)
+  const guide = useHeadGuide()
+  const { beginWatch, endWatch } = guide
+  // Camera check per take id, filled in when the take it watched comes back from analysis.
+  const [checks, setChecks] = useState<Record<number, PositionCheck>>({})
+  const pendingCheck = useRef<PositionCheck | undefined>(undefined)
+  const watching = status === 'recording' && plan?.kind === 'take'
 
   const capturing = status === 'countdown' || status === 'recording'
   const calibrating = capturing && plan?.kind === 'calibration'
   const busy = status === 'requesting' || status === 'analysing'
   const take = takes.find((t) => t.id === selectedId) ?? takes[0] ?? null
   const captureS = plan?.lengthS ?? lengthS
+  const verdict = judgeTake(take ? checks[take.id] : undefined)
+  const newestId = takes[0]?.id
+
+  useEffect(() => {
+    if (!watching) return
+    beginWatch()
+    return () => {
+      pendingCheck.current = endWatch()
+    }
+  }, [watching, beginWatch, endWatch])
+
+  useEffect(() => {
+    const check = pendingCheck.current
+    if (newestId == null || !check) return
+    pendingCheck.current = undefined
+    setChecks((prev) => (newestId in prev ? prev : { ...prev, [newestId]: check }))
+  }, [newestId])
 
   const record = () => {
     setSelectedId(null)
@@ -364,13 +495,17 @@ function App() {
   else if (status === 'countdown') subline = 'Get ready. Bark the moment you see BARK!'
   else if (calibrating) {
     subline = live.elapsedS < QUIET_S ? 'Calibrating. Stay quiet for a moment.' : 'Now read the line aloud.'
+  } else if (status === 'recording' && guide.status === 'on' && guide.fit === 'close') {
+    subline = 'Too close to the mic. Sit back into the outline.'
+  } else if (status === 'recording' && guide.status === 'on' && guide.fit === 'none') {
+    subline = 'The camera can’t see you. Get back into the outline.'
   } else if (status === 'recording') {
     subline = plan?.countdown
       ? `Bark! The window closes at ${captureS} s.`
       : `Recording. Bark now; it stops on its own at ${captureS} s.`
   } else if (status === 'analysing') {
     subline = plan?.kind === 'calibration' ? 'Measuring your calibration.' : 'Measuring the take.'
-  } else if (take) subline = finding(take, calibration)
+  } else if (take) subline = finding(take, calibration, verdict)
   else if (calibration && plan?.kind === 'calibration') {
     subline = 'Calibrated. Record a bark to see how far it rises above your voice.'
   }
@@ -523,8 +658,17 @@ function App() {
           </div>
 
           <div className="rail">
-            <TakesPanel takes={takes} selectedId={take?.id ?? null} onSelect={setSelectedId} />
-            <LikenessPanel take={take} disabled={capturing || busy} />
+            <CameraPanel
+              status={guide.status}
+              error={guide.error}
+              fit={guide.fit}
+              attachVideo={guide.attachVideo}
+              onStart={() => void guide.start()}
+              onStop={guide.stop}
+              disabled={capturing}
+            />
+            <TakesPanel takes={takes} checks={checks} selectedId={take?.id ?? null} onSelect={setSelectedId} />
+            <ScorePanel take={take} calibration={calibration} verdict={verdict} disabled={capturing || busy} />
             <ScoringPanel take={take} />
           </div>
         </div>
