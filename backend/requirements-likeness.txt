@@ -3,5 +3,6 @@
 # 2.14 and only ever shipped Linux wheels). Wheels exist for Python 3.10-3.14
 # on Apple Silicon Mac, Windows x64 and Linux; NOT for Intel Macs.
 ai-edge-litert>=2.0
+certifi>=2023.7
 numpy>=1.24
 scipy>=1.10

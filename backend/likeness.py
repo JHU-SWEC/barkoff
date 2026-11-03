@@ -11,11 +11,14 @@ Public interface:
 """
 
 import csv
+import shutil
+import ssl
 import urllib.request
 from functools import lru_cache
 from math import gcd
 from pathlib import Path
 
+import certifi
 import numpy as np
 from ai_edge_litert.interpreter import Interpreter
 from scipy.signal import resample_poly
@@ -67,7 +70,11 @@ def _download(url: str, dest: Path) -> Path:
         dest.parent.mkdir(parents=True, exist_ok=True)
         print(f"Downloading {url} -> {dest}")
         tmp = dest.with_suffix(dest.suffix + ".part")
-        urllib.request.urlretrieve(url, tmp)
+        # certifi's CA bundle: python.org builds on macOS ship without one,
+        # so the default context fails with CERTIFICATE_VERIFY_FAILED.
+        context = ssl.create_default_context(cafile=certifi.where())
+        with urllib.request.urlopen(url, context=context) as response, open(tmp, "wb") as f:
+            shutil.copyfileobj(response, f)
         tmp.rename(dest)
     return dest
 

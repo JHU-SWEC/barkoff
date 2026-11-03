@@ -1,13 +1,19 @@
-"""Tiny local HTTP server so the frontend can score a take with likeness.py.
+"""Tiny local HTTP server so the frontend can score a take like score.py does.
 
 Usage:
     python server.py            # listens on http://localhost:8000
 
-POST /api/likeness?sr=16000
-    Body: raw mono float32 little-endian samples in [-1, 1].
-    The browser decodes and resamples the take itself, so no FFmpeg is needed.
-    Returns JSON: {"probability": float, "durationS": float,
-                   "top": [{"name": str, "score": float}, ...]}
+POST /api/score?sr=48000[&noise_lufs=-58.2&speech_lufs=-27.5]
+    Body: raw mono float32 little-endian samples in [-1, 1], at the take's
+    own sample rate. Not resampled to 16 kHz: loudness weights the range
+    above 8 kHz that a 16 kHz copy would drop. likeness.py resamples itself.
+    The browser decodes the take itself, so no FFmpeg is needed.
+    noise_lufs and speech_lufs are the player's calibration; without them
+    loudness is scored against a typical speaking voice.
+    Returns JSON: score.py's numbers plus the weights and the top YAMNet classes:
+        {"score", "loudness", "likeness", "loudness_lufs", "over_speech_lu",
+         "duration_s", "calibrated", "weights": {"loudness", "likeness"},
+         "top": [{"name", "score"}, ...]}
 
 Standard library only (plus likeness.py's own deps). Single-threaded on
 purpose: the TFLite interpreter is shared and not safe to call concurrently.
@@ -20,6 +26,8 @@ from urllib.parse import parse_qs, urlparse
 import numpy as np
 
 import likeness
+import score as scorer
+from loudness import Calibration
 
 HOST = "localhost"
 PORT = 8000
@@ -29,19 +37,26 @@ MAX_BODY_BYTES = 12 * 1024 * 1024
 TOP_K = 5
 
 
-def score(audio: np.ndarray, sr: int) -> dict:
-    """Bark probability plus the top YAMNet classes, like try_likeness.py prints."""
+def score(audio: np.ndarray, sr: int, calibration: Calibration | None) -> dict:
+    """score.py's result for the take, plus the top YAMNet classes."""
     mean_scores = likeness.frame_scores(audio, sr).mean(axis=0)
     names = likeness.class_names()
     top = [
         {"name": names[i], "score": float(mean_scores[i])}
         for i in np.argsort(mean_scores)[::-1][:TOP_K]
     ]
-    return {
-        "probability": likeness.bark_probability(audio, sr),
-        "durationS": len(audio) / sr,
-        "top": top,
-    }
+    weights = {"loudness": scorer.LOUDNESS_WEIGHT, "likeness": scorer.LIKENESS_WEIGHT}
+    return {**scorer.score(audio, sr, calibration), "weights": weights, "top": top}
+
+
+def parse_calibration(query: dict) -> Calibration | None:
+    """Both levels or neither; a half calibration is a client bug, not a default."""
+    noise, speech = query.get("noise_lufs"), query.get("speech_lufs")
+    if noise is None and speech is None:
+        return None
+    if noise is None or speech is None:
+        raise ValueError("Send both noise_lufs and speech_lufs, or neither")
+    return Calibration(float(noise[0]), float(speech[0]))
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -55,15 +70,21 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         url = urlparse(self.path)
-        if url.path != "/api/likeness":
+        if url.path != "/api/score":
             self._send_json(404, {"error": "Not found"})
             return
 
+        query = parse_qs(url.query)
         try:
-            sr = int(parse_qs(url.query).get("sr", ["16000"])[0])
+            sr = int(query.get("sr", ["16000"])[0])
             length = int(self.headers.get("Content-Length", "0"))
         except ValueError:
             self._send_json(400, {"error": "sr and Content-Length must be integers"})
+            return
+        try:
+            calibration = parse_calibration(query)
+        except ValueError as err:
+            self._send_json(400, {"error": str(err)})
             return
         if not 8000 <= sr <= 192000:
             self._send_json(400, {"error": f"Unsupported sample rate {sr}"})
@@ -74,7 +95,7 @@ class Handler(BaseHTTPRequestHandler):
 
         audio = np.frombuffer(self.rfile.read(length), dtype="<f4")
         try:
-            self._send_json(200, score(audio, sr))
+            self._send_json(200, score(audio, sr, calibration))
         except Exception as err:  # report model errors to the page instead of dropping the connection
             self._send_json(500, {"error": str(err)})
 
@@ -83,7 +104,7 @@ def main() -> None:
     # Load the model before the first request so scoring a take is quick.
     likeness.dog_class_indices()
     likeness.frame_length()
-    print(f"Likeness server on http://{HOST}:{PORT}")
+    print(f"Scoring server on http://{HOST}:{PORT}")
     HTTPServer((HOST, PORT), Handler).serve_forever()
 
 

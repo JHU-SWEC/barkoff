@@ -32,7 +32,7 @@ Open site → mic check (allow mic, calibrate) → sign in → home (pick a mode
 
 ## Scoring
 
-**Bark score = 0.7 × Loudness + 0.3 × Likeness**
+**Bark score = 0.2 × Loudness + 0.8 × Likeness**
 
 - **Loudness:** peak short-term loudness (LUFS over a 400 ms window) rather than raw peak, so a single click or mic bump doesn't count. Each player does a 5-second calibration at setup (a normal speaking line and silence); loudness is scored relative to that baseline and room noise, capped to a sane range.
 - **Dog-likeness:** a pretrained audio classifier (YAMNet, trained on AudioSet, which has "Dog" and "Bark" classes) is the v1 model; likeness is its bark probability, smoothed over the bark window. A similarity term compares the bark's embedding to a reference set of real dog barks (cosine similarity), so barks get credit for sounding like a dog, not just triggering the label.

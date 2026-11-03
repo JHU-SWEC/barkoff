@@ -21,7 +21,7 @@ bark_embedding(audio: np.ndarray, sr: int) -> np.ndarray  # (1024,), stub for la
 audio, sr = load_audio(path)            # teammate: (mono float32, 16000)
 L = loudness(audio, sr)                 # teammate: [0, 1]
 D = bark_probability(audio, sr)         # this module: [0, 1]
-final = 0.7 * L + 0.3 * D
+final = 0.2 * L + 0.8 * D
 ```
 
 ## How it works
@@ -84,8 +84,9 @@ gives about 0.9.
 
 ## Score takes from the frontend
 
-`server.py` exposes `bark_probability` over HTTP so the recorder page can
-score a take with the **Score likeness** button:
+`server.py` runs `score.py`'s `score()` over HTTP so the recorder page's
+**Score take** button shows loudness, likeness and the total (see
+[README.md](README.md)):
 
 ```bash
 cd backend
@@ -94,5 +95,6 @@ python server.py            # http://localhost:8000
 ```
 
 Then run the frontend with `npm run dev`; Vite proxies `/api` to port 8000.
-The browser decodes the take and sends 16 kHz mono float32 samples, so this
-path does not need FFmpeg.
+The browser decodes the take and sends mono float32 samples at the take's own
+sample rate, plus the player's calibration if there is one, so this path does
+not need FFmpeg.

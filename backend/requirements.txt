@@ -1,0 +1,4 @@
+# Everything the backend needs: scoring, the benchmark and the tests.
+-r requirements-likeness.txt
+pyloudnorm>=0.1.1
+pytest>=8.0
