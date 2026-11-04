@@ -1,9 +1,11 @@
 import { Link } from 'react-router'
 import { CalibrationSummary } from '../components/CalibrationSummary'
+import { loadSoloRecord } from '../soloResults'
 import { SAMPLE_LEADERBOARD, SAMPLE_ME } from '../sampleData'
 import './HomePage.css'
 
 export default function HomePage() {
+  const { best } = loadSoloRecord()
   return (
     <>
       <title>Bark Off</title>
@@ -36,7 +38,7 @@ export default function HomePage() {
         <section className="card" aria-labelledby="record-heading">
           <div className="card-head">
             <h2 id="record-heading">Your record</h2>
-            <span className="pill pill-warning">Sample data</span>
+            <span className="pill pill-warning">Elo is sample data</span>
           </div>
           <dl className="rows">
             <div className="row">
@@ -50,8 +52,8 @@ export default function HomePage() {
               </dd>
             </div>
             <div className="row">
-              <dt>Best bark</dt>
-              <dd className="num">{SAMPLE_ME.bestBark.toFixed(2)}</dd>
+              <dt>Best solo bark</dt>
+              <dd className="num">{best ? best.score.toFixed(2) : '—'}</dd>
             </div>
           </dl>
           <div className="card-actions">

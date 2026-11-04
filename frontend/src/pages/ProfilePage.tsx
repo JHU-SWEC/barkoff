@@ -4,16 +4,18 @@ import { CalibrationSummary } from '../components/CalibrationSummary'
 import { Figure } from '../components/Figure'
 import { PageHeader } from '../components/PageHeader'
 import { StubNote } from '../components/StubNote'
+import { loadSoloRecord } from '../soloResults'
 import { SAMPLE_HISTORY, SAMPLE_ME } from '../sampleData'
 import './ProfilePage.css'
 
 export default function ProfilePage() {
   const played = SAMPLE_ME.wins + SAMPLE_ME.losses
+  const { best } = loadSoloRecord()
 
   return (
     <>
       <PageHeader kicker="Your corner" title="Profile">
-        <StubNote>Only Mic check is real. Stats and match history are samples until accounts exist.</StubNote>
+        <StubNote>Mic check and best solo bark are real (kept in this browser). Elo and match history are samples until accounts exist.</StubNote>
       </PageHeader>
 
       <div className="profile-layout">
@@ -34,7 +36,7 @@ export default function ProfilePage() {
               <Figure lead label="Elo" value={String(SAMPLE_ME.elo)} />
               <Figure label="Record" value={`${SAMPLE_ME.wins}–${SAMPLE_ME.losses}`} />
               <Figure label="Win rate" value={`${Math.round((SAMPLE_ME.wins / played) * 100)}%`} />
-              <Figure label="Best bark" value={SAMPLE_ME.bestBark.toFixed(2)} />
+              <Figure label="Best solo bark" value={best ? best.score.toFixed(2) : '—'} />
             </dl>
           </section>
 

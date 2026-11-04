@@ -16,7 +16,7 @@ export function ScoringPanel({ take }: { take: Take | null }) {
         </div>
         <div className="row">
           <dt>Likeness</dt>
-          <dd>YAMNet bark probability</dd>
+          <dd>YAMNet dog probability + similarity to real barks</dd>
         </div>
         <div className="row">
           <dt>Score</dt>

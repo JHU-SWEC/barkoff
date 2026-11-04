@@ -1,4 +1,4 @@
-import { Link } from 'react-router'
+import { Link, useLocation, useSearchParams } from 'react-router'
 import { PageHeader } from '../components/PageHeader'
 import { StubNote } from '../components/StubNote'
 import {
@@ -9,6 +9,7 @@ import {
   type SampleBark,
   type SamplePlayer,
 } from '../sampleData'
+import { loadSoloRecord } from '../soloResults'
 import './ResultsPage.css'
 
 function best(barks: SampleBark[]): SampleBark {
@@ -42,7 +43,95 @@ function Fighter({ player, bark, winner }: { player: SamplePlayer; bark: SampleB
   )
 }
 
+function SoloResults() {
+  const location = useLocation()
+  const { last, best, runs } = loadSoloRecord()
+  if (!last) {
+    return (
+      <>
+        <PageHeader kicker="Solo" title="Results">
+          <p className="subline">No scored bark yet. Record one in Single player and press Score take.</p>
+        </PageHeader>
+        <div className="card-actions">
+          <Link className="button button-primary" to="/solo">
+            Start barking
+          </Link>
+        </div>
+      </>
+    )
+  }
+
+  const isBest = best != null && best.scoredAt === last.scoredAt
+  // Router state says whether this run beat an earlier best; without it (a refresh), fall back to the record.
+  const newBest = (location.state as { newBest?: boolean } | null)?.newBest ?? (isBest && runs > 1)
+
+  return (
+    <>
+      <PageHeader kicker="Solo" title="Results">
+        <p className="subline">
+          Take {last.takeId}, scored {new Date(last.scoredAt).toLocaleTimeString()}.{' '}
+          {last.calibrated ? 'Loudness against your calibration.' : 'Not calibrated: loudness against a typical voice.'}
+        </p>
+      </PageHeader>
+
+      <div className="verdict on-ink">
+        <p className="verdict-call">{newBest ? 'New best' : isBest ? 'Your best' : 'Nice bark'}</p>
+        <p className="verdict-rounds num">{last.score.toFixed(2)}</p>
+        {best && <p className="verdict-elo num">Best {best.score.toFixed(2)}</p>}
+      </div>
+
+      <div className="fighters">
+        <section className={isBest ? 'card fighter fighter-winner' : 'card fighter'} aria-label="This bark">
+          <p className="kicker">This bark</p>
+          <p className="fighter-score num">{last.score.toFixed(2)}</p>
+          <p className="quiet">
+            {last.weights.loudness} × loudness + {last.weights.likeness} × likeness
+          </p>
+          <Meter label="Loudness" value={last.loudness} />
+          <Meter label="Likeness" value={last.likeness} />
+        </section>
+        <section className="card" aria-labelledby="heard-heading">
+          <h2 id="heard-heading">What the model heard</h2>
+          <dl className="rows">
+            {last.top.map((c) => (
+              <div className="row" key={c.name}>
+                <dt>{c.name}</dt>
+                <dd className="num">{c.score.toFixed(3)}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="quiet">
+            Loudest 400 ms: <span className="num">{last.loudnessLufs.toFixed(1)} LUFS</span>,{' '}
+            <span className="num">
+              {last.overSpeechLu >= 0 ? '+' : '−'}
+              {Math.abs(last.overSpeechLu).toFixed(1)} LU
+            </span>{' '}
+            over speech. {runs} scored {runs === 1 ? 'bark' : 'barks'} in this browser.
+          </p>
+        </section>
+      </div>
+
+      <div className="card-actions">
+        <Link className="button button-primary" to="/solo">
+          Play again
+        </Link>
+        <Link className="button button-secondary" to="/leaderboard">
+          Leaderboard
+        </Link>
+        <Link className="button button-secondary" to="/">
+          Home
+        </Link>
+      </div>
+    </>
+  )
+}
+
 export default function ResultsPage() {
+  const [params] = useSearchParams()
+  return params.get('mode') === 'solo' ? <SoloResults /> : <DuelResults />
+}
+
+function DuelResults() {
   const youWon = SAMPLE_ROUNDS.filter((r) => r.you.score > r.them.score).length
   const theyWon = SAMPLE_ROUNDS.length - youWon
 

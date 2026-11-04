@@ -1,12 +1,17 @@
 import { useState } from 'react'
+import { Link } from 'react-router'
 import type { Calibration } from '../calibration'
 import { formatDb, formatDelta } from '../format'
 import { scoreTake, type ScoreResult } from '../score'
+import { saveSoloResult } from '../soloResults'
 import type { Take } from '../useBarkRecorder'
 import type { Verdict } from '../useHeadGuide'
 import { Figure } from './Figure'
 
-type ScoreState = { status: 'scoring' } | { status: 'done'; result: ScoreResult } | { status: 'error'; message: string }
+type ScoreState =
+  | { status: 'scoring' }
+  | { status: 'done'; result: ScoreResult; newBest: boolean }
+  | { status: 'error'; message: string }
 
 export function ScorePanel({
   take,
@@ -29,7 +34,9 @@ export function ScorePanel({
     setByTake((prev) => ({ ...prev, [id]: { status: 'scoring' } }))
     try {
       const result = await scoreTake(take.blob, calibration)
-      setByTake((prev) => ({ ...prev, [id]: { status: 'done', result } }))
+      // Only takes that passed the camera check count toward the personal best.
+      const newBest = verdict.ok ? saveSoloResult(result, id).newBest : false
+      setByTake((prev) => ({ ...prev, [id]: { status: 'done', result, newBest } }))
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Scoring failed.'
       setByTake((prev) => ({ ...prev, [id]: { status: 'error', message } }))
@@ -76,6 +83,11 @@ export function ScorePanel({
         </p>
       )}
       <div className="card-actions">
+        {result && verdict.ok && (
+          <Link className="button button-primary" to="/results?mode=solo" state={{ newBest: state?.status === 'done' && state.newBest }}>
+            See results
+          </Link>
+        )}
         <button
           className="button button-secondary"
           onClick={() => void run()}
