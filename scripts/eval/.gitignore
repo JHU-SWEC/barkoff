@@ -1,0 +1,7 @@
+# Downloaded datasets (ESC-50, Hugging Face cache) and eval outputs.
+data/
+results/
+
+# Personal test clips stay local; only the README is committed.
+clips/*
+!clips/README.md

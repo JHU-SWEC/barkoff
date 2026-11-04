@@ -1,0 +1,6 @@
+# Eval script deps. Also needs FFmpeg on PATH (see backend/README_likeness.md).
+-r ../../backend/requirements-likeness.txt
+
+# Only for --hf (rmarcosg/bark-detection). Audio is decoded with FFmpeg,
+# so torch/torchcodec are not needed.
+datasets>=3.0
