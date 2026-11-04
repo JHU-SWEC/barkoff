@@ -86,6 +86,8 @@ export function useBarkRecorder() {
   const stopRef = useRef<() => void>(() => {})
   const cleanupRef = useRef<() => void>(() => {})
   const urlsRef = useRef<Set<string>>(new Set())
+  // Navigating away unmounts this hook, so a capture can outlive the page that started it.
+  const mountedRef = useRef(true)
 
   // Revoke object URLs for takes that dropped off the list, and all of them on unmount.
   useEffect(() => {
@@ -94,13 +96,14 @@ export function useBarkRecorder() {
     urlsRef.current = kept
   }, [takes])
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
       cleanupRef.current()
       for (const url of urlsRef.current) URL.revokeObjectURL(url)
-    },
-    [],
-  )
+    }
+  }, [])
 
   const stop = useCallback(() => stopRef.current(), [])
 
@@ -115,6 +118,12 @@ export function useBarkRecorder() {
     } catch (err) {
       setError(describeMicError(err))
       setStatus('error')
+      return
+    }
+
+    // The player left while the permission prompt was open.
+    if (!mountedRef.current) {
+      stream.getTracks().forEach((t) => t.stop())
       return
     }
 
@@ -172,6 +181,8 @@ export function useBarkRecorder() {
       cancelAnimationFrame(rafId)
       timers.forEach(clearTimeout)
       stream.getTracks().forEach((t) => t.stop())
+      // The player left mid-take: nobody is left to show it to, or to revoke its URL.
+      if (!mountedRef.current) return
       setCue(null)
       setStatus('analysing')
 

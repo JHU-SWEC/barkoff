@@ -1,0 +1,104 @@
+/* Podium: first in the middle and tallest. */
+.podium {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: var(--gap);
+  margin-bottom: var(--gap);
+}
+
+.podium-step {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 24px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.podium-1 {
+  order: 2;
+  min-height: 228px;
+  background: var(--ball);
+}
+
+.podium-2 {
+  order: 1;
+  min-height: 188px;
+}
+
+.podium-3 {
+  order: 3;
+  min-height: 160px;
+}
+
+.podium-rank {
+  font-family: var(--font-display);
+  font-size: 56px;
+  line-height: 1.1;
+}
+
+.podium-name {
+  margin-top: auto;
+  font-family: var(--font-display);
+  font-size: 24px;
+  line-height: 30px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.podium-elo {
+  font-weight: 500;
+}
+
+.rank {
+  width: 56px;
+  font-family: var(--font-display);
+  font-size: 18px;
+}
+
+.row-you th,
+.row-you td {
+  background: var(--ball);
+}
+
+.row-you td:first-child {
+  box-shadow: -12px 0 0 var(--ball);
+}
+
+.row-you td:last-child {
+  box-shadow: 12px 0 0 var(--ball);
+}
+
+@media (max-width: 640px) {
+  .podium {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .podium-step {
+    min-height: 0;
+    padding: 12px 16px;
+  }
+
+  .podium-1,
+  .podium-2,
+  .podium-3 {
+    order: 0;
+    min-height: 0;
+  }
+
+  .podium-rank {
+    font-size: 36px;
+  }
+
+  .table th,
+  .table td {
+    padding: 0 6px;
+  }
+
+  /* Record is the column to lose on a narrow screen. */
+  .table th:nth-child(4),
+  .table td:nth-child(4) {
+    display: none;
+  }
+}

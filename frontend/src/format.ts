@@ -1,3 +1,5 @@
+import type { Take } from './useBarkRecorder'
+
 const MINUS = '−'
 
 // "-12.3" with a real minus sign; null for silence so callers can show a dash.
@@ -29,4 +31,8 @@ export function formatClock(date: Date): string {
 
 export function formatStamp(date: Date): string {
   return date.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+}
+
+export function takeFileName(take: Take): string {
+  return `bark-take-${take.id}.${take.extension}`
 }

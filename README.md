@@ -71,7 +71,7 @@ One app server runs the game; scoring is its own service.
 
 A website running locally that can record a bark in the browser, then run it through the scorer from the command line to get back a loudness number, a bark probability, and a combined score. Login, accounts, queues and server integration come later.
 
-- `frontend/`: Vite + React recorder page (record, playback, download, live level meter)
+- `frontend/`: Vite + React app. The recorder is the Single player page (record, playback, download, live level meter); the other pages are stubs, planned in [frontend/PAGES.md](frontend/PAGES.md)
 - Scorer: `score.py bark.webm`, which decodes with FFmpeg and prints loudness, likeness and the final score
 
 ## Running the frontend
@@ -84,7 +84,7 @@ npm install
 npm run dev
 ```
 
-Open the printed localhost URL, allow microphone access, and press **Record**. Auto-gain, noise suppression and echo cancellation are turned off so the scorer gets the raw signal; the "Microphone" panel shows what the browser actually applied. Chrome and Firefox record `.webm` (Opus); Safari records `.m4a` (AAC).
+Open the printed localhost URL, choose **Solo** (or go straight to `/solo`), allow microphone access, and press **Record**. Auto-gain, noise suppression and echo cancellation are turned off so the scorer gets the raw signal; the "Microphone" panel shows what the browser actually applied. Chrome and Firefox record `.webm` (Opus); Safari records `.m4a` (AAC).
 
 - **Calibrate:** two seconds of silence, then read one line at a normal volume. The page measures room noise and your speaking voice in LUFS and keeps them in this browser; **Download JSON** saves `calibration.json` for the scorer. Each take then shows how far its loudest 400 ms rose above your voice.
 - **Countdown:** 3-2-1, a random pause, then **BARK!** Recording starts on the cue, like a duel round. Stop during the countdown cancels.

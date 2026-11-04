@@ -1,0 +1,148 @@
+.duel-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--gap);
+  align-items: start;
+}
+
+/* Tale of the tape: stats down the middle, one fighter either side. */
+.tape {
+  padding: 32px;
+}
+
+.tape-names {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+}
+
+.tape-name {
+  font-family: var(--font-display);
+  font-size: 52px;
+  line-height: 1.1;
+  text-transform: uppercase;
+  color: var(--ball);
+}
+
+.tape-name-them {
+  text-align: right;
+  color: #ff7a57;
+}
+
+.tape-vs {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--flare);
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-size: 26px;
+  transform: rotate(-8deg);
+}
+
+.tape-rows {
+  margin-top: 24px;
+}
+
+.tape-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px minmax(0, 1fr);
+  align-items: center;
+  min-height: 52px;
+  border-top: 1px solid var(--rule);
+}
+
+.tape-row dt {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.tape-row dd {
+  font-family: var(--font-display);
+  font-size: 28px;
+  line-height: 36px;
+}
+
+.tape-row dd:last-child {
+  text-align: right;
+}
+
+.tape-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-top: 24px;
+}
+
+.tape-actions .button {
+  height: 48px;
+  min-width: 200px;
+  font-size: 19px;
+}
+
+.duel-steps {
+  counter-reset: step;
+}
+
+.duel-steps li {
+  position: relative;
+  padding: 10px 0 10px 36px;
+  border-top: 1px solid var(--rule);
+  counter-increment: step;
+}
+
+.duel-steps li:first-child {
+  border-top: 0;
+}
+
+.duel-steps li::before {
+  content: counter(step);
+  position: absolute;
+  top: 6px;
+  left: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 28px;
+}
+
+@media (max-width: 960px) {
+  .duel-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .tape {
+    padding: var(--pad);
+  }
+
+  .tape-name {
+    font-size: 30px;
+  }
+
+  .tape-vs {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+  }
+
+  .tape-row {
+    grid-template-columns: minmax(0, 1fr) 84px minmax(0, 1fr);
+  }
+
+  .tape-row dd {
+    font-size: 22px;
+  }
+
+  .tape-actions .button {
+    width: 100%;
+  }
+}

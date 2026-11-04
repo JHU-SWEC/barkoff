@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { FLOOR_DB, LOUDEST_WINDOW_S, type LevelPoint, type LoudestWindow } from './audio'
-import { formatDb } from './format'
+import { FLOOR_DB, LOUDEST_WINDOW_S, type LevelPoint, type LoudestWindow } from '../audio'
+import { formatDb } from '../format'
 
 const DB_TICKS = [0, -20, -40, -60]
 const MARGIN = { top: 28, right: 8, bottom: 28, left: 44 }

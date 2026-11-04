@@ -1,0 +1,94 @@
+/* Login sits outside the shell: a poster beside the form. */
+.login {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  min-height: 100dvh;
+}
+
+.login-poster {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 48px;
+  background: repeating-conic-gradient(from 0deg at 0% 100%, #1c1714 0deg 5deg, #2a231e 5deg 10deg);
+}
+
+.login-wordmark {
+  font-family: var(--font-display);
+  font-size: clamp(112px, 15vw, 200px);
+  line-height: 1.02;
+  text-transform: uppercase;
+  color: var(--ball);
+}
+
+.login-tagline {
+  margin-top: 16px;
+  font-size: 18px;
+  line-height: 26px;
+}
+
+.login-panel {
+  display: grid;
+  place-items: center;
+  padding: 48px 24px;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  width: min(360px, 100%);
+}
+
+.login-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.field input {
+  height: var(--control-height);
+  padding: 0 12px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.login-fields:disabled .field {
+  opacity: 0.55;
+}
+
+.login-or {
+  color: var(--muted);
+  text-align: center;
+}
+
+.login-guest {
+  margin-top: 24px;
+}
+
+@media (max-width: 760px) {
+  .login {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+  }
+
+  .login-poster {
+    padding: 24px;
+  }
+
+  .login-wordmark {
+    font-size: 88px;
+  }
+
+  .login-panel {
+    padding: 32px 16px;
+  }
+}

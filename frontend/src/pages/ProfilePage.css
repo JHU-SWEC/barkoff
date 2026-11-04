@@ -1,0 +1,68 @@
+.profile-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--gap);
+  align-items: start;
+}
+
+.profile-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.profile-id {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.profile-id h2 {
+  font-size: 40px;
+  line-height: 48px;
+}
+
+.profile-avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 88px;
+  height: 88px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--ball);
+}
+
+.profile-mark {
+  width: 56px;
+  height: 56px;
+  fill: var(--ink);
+}
+
+.profile-mark .mark-eye {
+  fill: var(--ball);
+}
+
+.figures-profile {
+  margin-bottom: 0;
+}
+
+@media (max-width: 960px) {
+  .profile-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Phone: a five-column table won't fit, so the least useful column goes. */
+@media (max-width: 640px) {
+  .profile-main .table th:last-child,
+  .profile-main .table td:last-child {
+    display: none;
+  }
+
+  .profile-main .table th,
+  .profile-main .table td {
+    padding: 0 6px;
+  }
+}

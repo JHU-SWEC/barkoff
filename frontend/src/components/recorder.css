@@ -1,0 +1,403 @@
+/* The recorder panels: level card, takes, camera, score. */
+
+/* Level trace */
+.trace {
+  width: 100%;
+}
+
+.trace svg {
+  display: block;
+  overflow: visible;
+}
+
+.trace-grid {
+  stroke: var(--grid);
+  stroke-dasharray: 2 3;
+}
+
+.trace-tick {
+  fill: var(--muted);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.trace-line {
+  fill: none;
+  stroke: var(--chart-3);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.trace-span {
+  fill: var(--chart-3);
+  opacity: 0.16;
+}
+
+.trace-note {
+  fill: var(--text);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+
+.trace-cursor {
+  stroke: var(--chart-1);
+  stroke-width: 1;
+}
+
+.trace-empty {
+  fill: var(--muted);
+  font-size: var(--fs-body);
+}
+
+/* The jumbotron. Live numbers are monospaced so they don't jitter as they change. */
+.level-card {
+  scroll-margin-top: 76px;
+}
+
+.level-card .figure dd {
+  font-family: var(--mono);
+  font-weight: 500;
+}
+
+.level-card .figure-lead dd:not(.missing) {
+  font-size: 36px;
+  line-height: 48px;
+  letter-spacing: -0.02em;
+}
+
+/* Countdown and calibration prompts sit over the trace */
+.stage {
+  position: relative;
+}
+
+.cue {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  text-align: center;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  pointer-events: none;
+}
+
+.cue:empty {
+  display: none;
+}
+
+/* The one loud moment on the page: the whole stage goes tennis-ball. */
+.cue:has(.cue-bark) {
+  background: var(--ball);
+}
+
+.cue-count {
+  font-family: var(--font-display);
+  font-size: 150px;
+  line-height: 1;
+  animation: cue-in 240ms ease-out;
+}
+
+.cue-bark {
+  font-family: var(--font-display);
+  font-size: 150px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+  animation: cue-in 160ms ease-out;
+}
+
+.cue-line {
+  max-width: 32ch;
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 38px;
+  letter-spacing: 0.01em;
+  text-wrap: balance;
+}
+
+.cue-note {
+  color: var(--muted);
+  font-size: 15px;
+}
+
+@keyframes cue-in {
+  from {
+    opacity: 0;
+    transform: scale(1.25);
+  }
+}
+
+.error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+  min-height: 188px;
+  padding: 0 0 0 16px;
+  border-left: 2px solid var(--negative);
+}
+
+/* Record controls sit under the stage, the big button on the right. */
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--rule);
+}
+
+.button-record {
+  min-width: 168px;
+  height: 48px;
+  margin-left: auto;
+  font-size: 19px;
+}
+
+.button-primary.button-record[data-live='true'] {
+  background: var(--flare);
+  border-color: var(--flare);
+  color: #ffffff;
+  animation: on-air 1.4s ease-in-out infinite;
+}
+
+@keyframes on-air {
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--flare) 30%, transparent);
+  }
+}
+
+/* Player */
+.player {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.player audio {
+  width: 100%;
+  height: 40px;
+}
+
+.player-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Takes */
+.takes {
+  margin: 0 -12px;
+}
+
+.take {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.take:hover {
+  background: var(--raised);
+}
+
+.take[aria-pressed='true'] {
+  background: var(--raised);
+  box-shadow: inset 3px 0 0 var(--ink);
+}
+
+.take-name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.take-time {
+  color: var(--muted);
+  text-align: right;
+}
+
+.take-meta {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Microphone */
+.mic-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Calibration: Home and Profile link here, so leave room under the sticky bar. */
+.calibration-card {
+  scroll-margin-top: 76px;
+}
+
+.calibration-intro {
+  max-width: 60ch;
+}
+
+/* Scoring: how the number is made */
+.scoring {
+  margin-top: 12px;
+}
+
+.scoring dd {
+  text-align: right;
+}
+
+.card > p code {
+  white-space: nowrap;
+}
+
+/* Score: loudness, likeness and the total from the local scoring server */
+.score-card .figures-small {
+  grid-template-columns: 1.3fr 1fr 1fr;
+}
+
+.score-card .figures-small .figure-lead dd {
+  font-size: 56px;
+  line-height: 60px;
+}
+
+.score-detail {
+  margin-top: 12px;
+}
+
+.score-top {
+  margin-top: 12px;
+}
+
+.score-top dd {
+  text-align: right;
+}
+
+.score-error {
+  padding-left: 12px;
+  border-left: 2px solid var(--negative);
+}
+
+/* Position: the webcam under a head-and-shoulders outline. The outline turns tennis-ball in position, red too close. */
+.camera {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--radius-control);
+  background: var(--raised);
+}
+
+.camera video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.camera-outline {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: var(--surface);
+  stroke-width: 3;
+  stroke-dasharray: 8 6;
+  vector-effect: non-scaling-stroke;
+}
+
+.camera[data-fit='off'] .camera-outline {
+  stroke: var(--control);
+}
+
+.camera[data-fit='ok'] .camera-outline {
+  stroke: var(--ball);
+  stroke-dasharray: none;
+}
+
+.camera[data-fit='close'] .camera-outline,
+.camera[data-fit='none'] .camera-outline {
+  stroke: var(--flare);
+}
+
+.camera-prompt {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-chip);
+  background: color-mix(in srgb, var(--ink) 80%, transparent);
+  color: #ffffff;
+  font-weight: 500;
+  text-align: center;
+}
+
+.camera[data-fit='off'] .camera-prompt {
+  background: none;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.camera[data-fit='close'] .camera-prompt,
+.camera[data-fit='none'] .camera-prompt {
+  background: var(--negative);
+}
+
+.camera-note {
+  margin-top: 12px;
+}
+
+/* Phone */
+@media (max-width: 640px) {
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .button-record {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .take {
+    min-height: 44px;
+  }
+
+  .cue-count,
+  .cue-bark {
+    font-size: 104px;
+  }
+
+  .cue-line {
+    font-size: 22px;
+    line-height: 30px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cue-count,
+  .cue-bark,
+  .button-primary.button-record[data-live='true'] {
+    animation: none;
+  }
+}

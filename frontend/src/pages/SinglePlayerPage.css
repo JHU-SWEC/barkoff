@@ -1,0 +1,57 @@
+/* 1100px column: 2fr + 16px gap + 1fr. The stage leads; the camera and score ride the rail. */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--gap);
+  align-items: start;
+}
+
+.main,
+.rail,
+.setup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+/* Tablet and phone: one column, in the order you use them. */
+@media (max-width: 960px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .main,
+  .rail,
+  .setup {
+    display: contents;
+  }
+
+  .camera-card {
+    order: 1;
+  }
+
+  .camera {
+    max-width: 400px;
+    margin-inline: auto;
+  }
+
+  .score-card {
+    order: 2;
+  }
+
+  .takes-card {
+    order: 3;
+  }
+
+  .calibration-card {
+    order: 4;
+  }
+
+  .mic-card {
+    order: 5;
+  }
+
+  .scoring-card {
+    order: 6;
+  }
+}

@@ -1,0 +1,111 @@
+.verdict {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  margin-bottom: var(--gap);
+  padding: 24px 32px;
+  border-radius: var(--radius-card);
+}
+
+.verdict-call {
+  font-family: var(--font-display);
+  font-size: 88px;
+  line-height: 1.05;
+  text-transform: uppercase;
+  color: var(--ball);
+}
+
+.verdict-rounds {
+  font-family: var(--font-display);
+  font-size: 44px;
+  line-height: 1.1;
+}
+
+.verdict-elo {
+  margin-left: auto;
+  font-family: var(--font-display);
+  font-size: 32px;
+  line-height: 1.1;
+  color: var(--ball);
+}
+
+.fighters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap);
+  margin-bottom: var(--gap);
+}
+
+.fighter .kicker {
+  color: var(--muted);
+}
+
+.fighter-winner {
+  background: var(--ball);
+
+  --muted: #3f3a1e;
+  --rule: #a9bf2c;
+}
+
+.fighter-score {
+  margin-top: 8px;
+  font-family: var(--font-display);
+  font-size: 88px;
+  line-height: 1.1;
+}
+
+.meter {
+  margin-top: 16px;
+}
+
+.meter-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.meter-track {
+  height: 12px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-chip);
+  background: var(--surface);
+}
+
+.meter-fill {
+  height: 100%;
+  background: var(--ink);
+}
+
+.round-won {
+  font-weight: 700;
+}
+
+.round-won::after {
+  content: ' ●' / 'won';
+  color: var(--flare);
+}
+
+@media (max-width: 640px) {
+  .verdict {
+    padding: 20px var(--pad);
+  }
+
+  .verdict-call {
+    font-size: 60px;
+  }
+
+  .verdict-rounds {
+    font-size: 32px;
+  }
+
+  .verdict-elo {
+    margin-left: 0;
+    font-size: 24px;
+  }
+
+  .fighters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

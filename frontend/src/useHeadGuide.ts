@@ -109,8 +109,11 @@ export function useHeadGuide() {
   const streamRef = useRef<MediaStream | null>(null)
   const fitRef = useRef<Fit>('none')
   const watchRef = useRef<PositionCheck | null>(null)
+  // Bumped on unmount, so an open() still waiting on the camera knows nobody wants it any more.
+  const openIdRef = useRef(0)
 
   const open = useCallback(async () => {
+    const id = ++openIdRef.current
     try {
       const [stream] = await Promise.all([
         navigator.mediaDevices.getUserMedia({
@@ -119,6 +122,10 @@ export function useHeadGuide() {
         }),
         loadDetector(),
       ])
+      if (id !== openIdRef.current) {
+        stream.getTracks().forEach((t) => t.stop())
+        return
+      }
       streamRef.current = stream
       setStatus('on')
       remember(true)
@@ -150,7 +157,11 @@ export function useHeadGuide() {
 
   useEffect(() => {
     if (readRemembered()) void open()
-    return () => streamRef.current?.getTracks().forEach((t) => t.stop())
+    return () => {
+      openIdRef.current += 1
+      streamRef.current?.getTracks().forEach((t) => t.stop())
+      streamRef.current = null
+    }
   }, [open])
 
   const attachVideo = useCallback((el: HTMLVideoElement | null) => {
