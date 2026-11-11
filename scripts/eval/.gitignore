@@ -5,3 +5,10 @@ results/
 # Personal test clips stay local; only the README is committed.
 clips/*
 !clips/README.md
+
+# Test set audio is rebuilt from testset/manifest.csv; labels/*.csv are committed.
+testset/audio/
+testset/own/
+
+# Python bytecode from running the scripts.
+__pycache__/
