@@ -6,7 +6,10 @@
 | `loudness.py` | Short-term loudness (BS.1770, 400 ms) scored against the player's calibration |
 | `likeness.py` | YAMNet dog-likeness (see [README_likeness.md](README_likeness.md)) |
 | `audio_io.py` | `load_audio(path)`: WAV directly, anything else through FFmpeg |
-| `server.py` | Local HTTP server behind the recorder page's Score take button (same numbers as `score.py`) |
+| `server.py` | Local HTTP server: the Score take button (same numbers as `score.py`) and the duel API |
+| `duels.py` | Ranked duels: guest players, best-of-three rounds on the server clock, Elo at the end |
+| `matchmaking.py` | The ranked queue: pairs players by Elo, widening the range the longer they wait |
+| `elo.py` | Elo expectation and update (K = 32, start 1200) |
 | `benchmark/` | Labelled clips and the likeness report |
 | `tests/` | pytest suite |
 
@@ -68,6 +71,29 @@ Baseline, `likeness.bark_probability` on 2026-11-03:
 | Same bark at x1 / x0.1 / x0.02 volume | 0.84 / 0.70 / 0.35 |
 | Same bark at 20 / 10 dB signal-to-noise | 0.60 / 0.28 |
 
+## Duels
+
+`python server.py` also runs ranked duels for the Duel page. Endpoints are
+listed at the top of `server.py`; the rules live in `duels.py`:
+
+- **Queue.** Each player's Elo window starts at ±50 and widens 10 per second
+  waited, up to ±400. Two players are paired when their gap fits inside both
+  windows, longest-waiting first, closest rating wins.
+- **Stage.** Picked when the duel is made (`STAGES`), so both screens' roulettes land on the same map.
+- **Rounds.** The server sets each round's countdown start and a random BARK!
+  cue 0.5 to 2 s after it. Both pages record the 5 s window and upload it; the
+  server scores both with `score.py`. A camera foul or a take that never
+  arrives scores 0. First to two round wins; a tie is replayed, five rounds
+  at most.
+- **Elo** updates once, when the duel ends.
+
+- **Practice vs bot** (`POST /api/duels/bot`, easy, normal or hard): the same
+  rounds against a bot that barks a score around its level. Unranked: no Elo,
+  no record, and bots stay off the leaderboard.
+
+Players and duels are in memory, so a restart resets ratings. Profiles will
+own the player record.
+
 ## Tests
 
 ```bash
@@ -77,6 +103,7 @@ python -m pytest
 - `test_loudness.py`: known BS.1770 levels, the 400 ms window, the calibration mapping.
 - `test_loudness_parity.py`: runs the recorder page's `loudness.ts` in Node
   (22.6+) on the same audio and checks both sides agree within 0.1 LU.
+- `test_matchmaking.py`, `test_duels.py`: Elo, the queue, and duel rounds on a fake clock.
 - `test_likeness.py`: behaviour on real barks (needs the benchmark clips).
   Targets the current scorer misses are `xfail(strict=True)`: when a change
   fixes one, pytest fails it on purpose so the marker gets removed and the fix

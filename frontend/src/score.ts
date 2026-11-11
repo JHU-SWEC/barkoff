@@ -19,7 +19,7 @@ export interface ScoreResult {
 
 const UNREACHABLE = 'The scoring server isn’t reachable. Start it with python backend/server.py.'
 
-async function decodeMono(blob: Blob): Promise<{ samples: Float32Array<ArrayBuffer>; rate: number }> {
+export async function decodeMono(blob: Blob): Promise<{ samples: Float32Array<ArrayBuffer>; rate: number }> {
   const ctx = new AudioContext()
   let decoded: AudioBuffer
   try {

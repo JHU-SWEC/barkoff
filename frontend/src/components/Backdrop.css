@@ -1,0 +1,1226 @@
+/* Duel stages. Everything is sized off the container (cqw/cqh/cqmin), so a stage looks the same
+   full screen and as a roulette thumbnail. The horizon sits 38% up: props stand on it (bottom: 38%),
+   the floor tilts away below it. Layers go back to front in Backdrop.tsx order. */
+.backdrop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  container-type: size;
+}
+
+.backdrop > * {
+  position: absolute;
+}
+
+:where(.backdrop, .search) .bd-sky {
+  inset: 0;
+}
+
+/* Hung from the horizon and taller than the space below it, so the tilt never leaves a gap. */
+:where(.backdrop, .search) .bd-floor {
+  top: 62%;
+  left: -50%;
+  right: -50%;
+  height: 80%;
+  transform: perspective(90cqh) rotateX(58deg);
+  transform-origin: 50% 0;
+}
+
+/* ---------- shared pieces ---------- */
+
+:where(.backdrop, .search) .cloud {
+  height: 6cqmin;
+  border-radius: 99px;
+  background: #ffffff;
+  box-shadow:
+    3cqmin -2.5cqmin 0 0.5cqmin #ffffff,
+    6cqmin 0 0 #ffffff;
+  opacity: 0.95;
+  animation: drift 70s linear infinite;
+}
+
+:where(.backdrop, .search) .cloud-1 {
+  top: 10%;
+  left: 12%;
+  width: 12cqmin;
+}
+
+:where(.backdrop, .search) .cloud-2 {
+  top: 20%;
+  left: 58%;
+  width: 9cqmin;
+  animation-duration: 95s;
+  animation-delay: -30s;
+}
+
+:where(.backdrop, .search) .cloud-3 {
+  top: 6%;
+  left: 80%;
+  width: 7cqmin;
+  opacity: 0.8;
+  animation-duration: 120s;
+  animation-delay: -60s;
+}
+
+@keyframes drift {
+  from {
+    translate: -20cqw 0;
+  }
+
+  to {
+    translate: 40cqw 0;
+  }
+}
+
+:where(.backdrop, .search) .skyline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 38%;
+  height: 46%;
+  display: flex;
+  align-items: flex-end;
+}
+
+:where(.backdrop, .search) .building {
+  flex-shrink: 0;
+  border: 0.4cqmin solid #2b2430;
+  border-bottom: 0;
+  background-image: radial-gradient(rgb(255 236 170 / 80%) 32%, transparent 36%);
+  background-size: 2.4cqw 3.4cqh;
+  background-position: 0.6cqw 1.2cqh;
+}
+
+/* A hazier, lower row of buildings further back. */
+:where(.backdrop, .search) .skyline-far {
+  height: 56%;
+  opacity: 0.45;
+  filter: saturate(0.4) brightness(1.4);
+  transform: scaleX(-1);
+}
+
+:where(.backdrop, .search) .skyline-far .building {
+  border-color: transparent;
+  background-image: none;
+}
+
+/* ---------- arena: the menu's sunset, with a crowd ---------- */
+
+.map-arena .bd-sky {
+  background: linear-gradient(180deg, #0f0b0a 0%, #24130f 30%, #5e2213 48%, #b8361a 57%, #f08a3a 62%, #1c1714 62.1%);
+}
+
+.map-arena .sun {
+  top: 62%;
+  left: 50%;
+  width: 52cqmin;
+  height: 52cqmin;
+  border-radius: 50%;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 58%, rgb(28 23 20 / 55%) 58% 61%, transparent 61% 64%),
+    radial-gradient(circle at 50% 30%, #fff1a8, #f7c948 35%, #f08a3a 60%, #d53a15);
+  translate: -50% -72%;
+  filter: drop-shadow(0 0 40px rgb(240 138 58 / 55%));
+}
+
+.map-arena .crowd {
+  left: 0;
+  right: 0;
+  bottom: 38%;
+  height: 13cqh;
+  background:
+    radial-gradient(circle at 50% 100%, #0b0807 62%, transparent 64%) 0 100% / 26px 20px repeat-x,
+    radial-gradient(circle at 50% 100%, #15100e 62%, transparent 64%) 13px calc(100% - 9px) / 26px 20px repeat-x,
+    radial-gradient(circle at 50% 100%, #1d1613 62%, transparent 64%) 6px calc(100% - 18px) / 26px 20px repeat-x,
+    linear-gradient(transparent 55%, #0b0807 55%);
+}
+
+.map-arena .bd-floor {
+  background:
+    repeating-linear-gradient(90deg, rgb(216 242 60 / 55%) 0 2px, transparent 2px 80px),
+    repeating-linear-gradient(0deg, rgb(216 242 60 / 55%) 0 2px, transparent 2px 60px),
+    linear-gradient(#2a1d17, #120e0c);
+  box-shadow: 0 -2px 24px rgb(216 242 60 / 45%);
+}
+
+/* ---------- sidewalk: midday downtown ---------- */
+
+.map-sidewalk .bd-sky {
+  background: linear-gradient(#5fb4ea, #bfe6fb 62%, #8d8577 62%);
+}
+
+/* A telephone wire sagging across the sky, with birds on it. */
+:where(.backdrop, .search) .wire {
+  top: 14%;
+  left: -5%;
+  right: -5%;
+  height: 10%;
+  border-bottom: 0.3cqmin solid #2b2430;
+  border-radius: 0 0 50% 50%;
+}
+
+:where(.backdrop, .search) .bird {
+  width: 1.6cqw;
+  height: 1.4cqw;
+  border-radius: 50% 50% 40% 40%;
+  background: #2b2430;
+}
+
+:where(.backdrop, .search) .bird::after {
+  content: '';
+  position: absolute;
+  top: 10%;
+  right: -35%;
+  width: 45%;
+  height: 45%;
+  border-radius: 50%;
+  background: #2b2430;
+}
+
+:where(.backdrop, .search) .bird-1 {
+  top: 21.5%;
+  left: 30%;
+}
+
+:where(.backdrop, .search) .bird-2 {
+  top: 22.6%;
+  left: 34%;
+  animation: hop 3s steps(1) infinite;
+}
+
+:where(.backdrop, .search) .bird-3 {
+  top: 21%;
+  left: 71%;
+  transform: scaleX(-1);
+}
+
+@keyframes hop {
+  80% {
+    translate: 0 -0.8cqh;
+  }
+}
+
+/* Shopfronts along the bottom of the buildings: striped awnings, windows, doors. */
+:where(.backdrop, .search) .shops {
+  left: 6%;
+  right: 6%;
+  bottom: 38%;
+  height: 17%;
+  display: flex;
+  gap: 4%;
+}
+
+:where(.backdrop, .search) .shop {
+  position: relative;
+  flex: 1;
+  border: 0.4cqmin solid #2b2430;
+  border-bottom: 0;
+  background: #e9dcc4;
+}
+
+:where(.backdrop, .search) .awning {
+  position: absolute;
+  top: 0;
+  left: -4%;
+  right: -4%;
+  height: 26%;
+  border: 0.4cqmin solid #2b2430;
+  border-radius: 0 0 1cqmin 1cqmin;
+  background: repeating-linear-gradient(90deg, var(--a) 0 2cqw, #fdf6ea 2cqw 4cqw);
+}
+
+:where(.backdrop, .search) .shop-red {
+  --a: #d53a15;
+}
+
+:where(.backdrop, .search) .shop-green {
+  --a: #2f9449;
+}
+
+:where(.backdrop, .search) .shop-blue {
+  --a: #2a6fd0;
+}
+
+:where(.backdrop, .search) .shop-window {
+  position: absolute;
+  left: 8%;
+  bottom: 12%;
+  width: 52%;
+  height: 50%;
+  border: 0.4cqmin solid #2b2430;
+  background: linear-gradient(130deg, #bfe6fb 0 40%, #e9f7ff 40% 50%, #9fd2ee 50%);
+}
+
+:where(.backdrop, .search) .shop-door {
+  position: absolute;
+  right: 10%;
+  bottom: 0;
+  width: 20%;
+  height: 66%;
+  border: 0.4cqmin solid #2b2430;
+  border-bottom: 0;
+  background: linear-gradient(#7a4d2b, #5e3a20);
+}
+
+.map-sidewalk .curb {
+  left: 0;
+  right: 0;
+  bottom: 36%;
+  height: 2.6%;
+  background: linear-gradient(#e7e1d6, #a39b8d);
+  border-top: 0.4cqmin solid #2b2430;
+}
+
+:where(.backdrop, .search) .lamp {
+  bottom: 38%;
+  width: 0.9cqw;
+  height: 34%;
+  background: #2f3a40;
+}
+
+:where(.backdrop, .search) .lamp::before {
+  content: '';
+  position: absolute;
+  top: -1cqh;
+  left: 50%;
+  width: 4.5cqw;
+  height: 2.2cqh;
+  border: 0.4cqmin solid #1d2428;
+  border-radius: 2cqmin 2cqmin 0.6cqmin 0.6cqmin;
+  background: #fff3c4;
+  translate: -50% 0;
+}
+
+:where(.backdrop, .search) .lamp-1 {
+  left: 12%;
+}
+
+:where(.backdrop, .search) .lamp-2 {
+  left: 86%;
+}
+
+/* A young tree in a sidewalk planter. */
+:where(.backdrop, .search) .street-tree {
+  left: 40%;
+  bottom: 38%;
+  width: 7cqw;
+  height: 26%;
+  background:
+    radial-gradient(circle at 50% 32%, #4e9a3e 0 30%, #3e7d3a 31% 44%, transparent 46%),
+    linear-gradient(#6b4423, #6b4423) 50% 88% / 10% 40% no-repeat,
+    linear-gradient(#8d8577, #8d8577) 50% 100% / 60% 8% no-repeat;
+}
+
+:where(.backdrop, .search) .mailbox {
+  left: 22%;
+  bottom: 38%;
+  width: 3.4cqw;
+  height: 10cqh;
+  border: 0.4cqmin solid #102a52;
+  border-radius: 1.6cqw 1.6cqw 0.3cqw 0.3cqw;
+  background: linear-gradient(90deg, #2a6fd0, #1f4f99);
+}
+
+:where(.backdrop, .search) .mailbox::before {
+  content: '';
+  position: absolute;
+  top: 30%;
+  left: 15%;
+  right: 15%;
+  height: 8%;
+  background: #102a52;
+}
+
+:where(.backdrop, .search) .trash {
+  left: 74%;
+  bottom: 38%;
+  width: 3cqw;
+  height: 8cqh;
+  border: 0.4cqmin solid #2b2430;
+  border-radius: 0.4cqw;
+  background: repeating-linear-gradient(90deg, #5d6b6f 0 0.6cqw, #4a575b 0.6cqw 1cqw);
+}
+
+:where(.backdrop, .search) .trash::before {
+  content: '';
+  position: absolute;
+  top: -1.4cqh;
+  left: -12%;
+  right: -12%;
+  height: 1.4cqh;
+  border: 0.4cqmin solid #2b2430;
+  border-radius: 1cqmin 1cqmin 0 0;
+  background: #6d7b7f;
+}
+
+:where(.backdrop, .search) .hydrant {
+  left: 60%;
+  bottom: 38%;
+  width: 2.8cqw;
+  height: 8cqh;
+  border: 0.4cqmin solid #4a120a;
+  border-radius: 1.4cqw 1.4cqw 0.4cqw 0.4cqw;
+  background: linear-gradient(90deg, #e2452a, #c8301a 60%, #8d2010);
+}
+
+:where(.backdrop, .search) .hydrant::before {
+  content: '';
+  position: absolute;
+  top: 35%;
+  left: -40%;
+  right: -40%;
+  height: 20%;
+  border: 0.4cqmin solid #4a120a;
+  border-radius: 0.6cqw;
+  background: #d63a20;
+}
+
+.map-sidewalk .bd-floor {
+  background:
+    repeating-linear-gradient(90deg, rgb(60 52 44 / 45%) 0 2px, transparent 2px 110px),
+    repeating-linear-gradient(0deg, rgb(60 52 44 / 35%) 0 2px, transparent 2px 90px),
+    radial-gradient(ellipse 30px 12px, rgb(60 52 44 / 18%) 50%, transparent 52%) 40px 30px / 260px 180px,
+    linear-gradient(#cfc8bb, #a69e90);
+}
+
+/* ---------- dog park: hills, trees, agility gear ---------- */
+
+.map-park .bd-sky {
+  background: linear-gradient(#6ec0ec, #d8f2ff 62%);
+}
+
+:where(.backdrop, .search) .park-sun {
+  top: 8%;
+  left: 8%;
+  width: 11cqh;
+  height: 11cqh;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fffbe0, #ffe36b 65%);
+  box-shadow: 0 0 6cqh rgb(255 227 107 / 70%);
+}
+
+:where(.backdrop, .search) .hills {
+  left: -10%;
+  right: -10%;
+  bottom: 38%;
+  height: 26%;
+  background:
+    radial-gradient(ellipse 30% 70% at 20% 100%, #9fd18a 98%, transparent 100%),
+    radial-gradient(ellipse 36% 90% at 70% 100%, #8cc77a 98%, transparent 100%);
+}
+
+:where(.backdrop, .search) .trees {
+  left: -2%;
+  right: -2%;
+  bottom: 38%;
+  height: 20%;
+  background:
+    radial-gradient(circle at 50% 60%, #3e7d3a 58%, transparent 60%) 0 100% / 13cqw 100% repeat-x,
+    radial-gradient(circle at 50% 70%, #2f6a30 58%, transparent 60%) 6cqw 100% / 11cqw 80% repeat-x;
+}
+
+:where(.backdrop, .search) .park-tree {
+  bottom: 38%;
+  width: 14cqw;
+  height: 44%;
+  background:
+    radial-gradient(circle at 34% 30%, #5fae4a 0 22%, transparent 23%),
+    radial-gradient(circle at 64% 26%, #4e9a3e 0 24%, transparent 25%),
+    radial-gradient(circle at 50% 42%, #3e7d3a 0 32%, transparent 33%),
+    linear-gradient(#6b4423, #5a3a1d) 50% 100% / 12% 50% no-repeat;
+  filter: drop-shadow(0.4cqmin 0 0 #24481f);
+}
+
+:where(.backdrop, .search) .park-tree-1 {
+  left: 2%;
+}
+
+:where(.backdrop, .search) .park-tree-2 {
+  right: 4%;
+  width: 11cqw;
+  height: 36%;
+}
+
+:where(.backdrop, .search) .fence {
+  left: 0;
+  right: 0;
+  bottom: 38%;
+  height: 10%;
+  background:
+    linear-gradient(transparent 22%, #8a5a34 22% 34%, transparent 34% 66%, #8a5a34 66% 78%, transparent 78%),
+    repeating-linear-gradient(90deg, #c08a58 0 2.4cqw, #7a4d2b 2.4cqw 2.7cqw, transparent 2.7cqw 4.4cqw);
+}
+
+:where(.backdrop, .search) .park-sign {
+  left: 45%;
+  bottom: 44%;
+  padding: 0.6cqh 1.6cqw;
+  border: 0.5cqmin solid #4d2f16;
+  border-radius: 0.6cqmin;
+  background: #a8703f;
+  color: #fff3c4;
+  font-family: var(--font-display);
+  font-size: 3.6cqh;
+  text-transform: uppercase;
+  white-space: nowrap;
+  translate: -50% 0;
+}
+
+:where(.backdrop, .search) .park-sign::before,
+:where(.backdrop, .search) .park-sign::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  width: 0.8cqw;
+  height: 6cqh;
+  background: #6b4423;
+}
+
+:where(.backdrop, .search) .park-sign::before {
+  left: 18%;
+}
+
+:where(.backdrop, .search) .park-sign::after {
+  right: 18%;
+}
+
+:where(.backdrop, .search) .bush {
+  bottom: 37%;
+  width: 9cqw;
+  height: 7cqh;
+  border-radius: 50% 50% 10% 10%;
+  background:
+    radial-gradient(circle at 30% 40%, #6dbb52 0 25%, transparent 26%),
+    radial-gradient(circle at 70% 35%, #6dbb52 0 22%, transparent 23%),
+    #4f9a3c;
+}
+
+:where(.backdrop, .search) .bush-1 {
+  left: 24%;
+}
+
+:where(.backdrop, .search) .bush-2 {
+  left: 68%;
+  width: 7cqw;
+}
+
+/* Agility gear: a tyre hung in a frame, and a striped hurdle. */
+:where(.backdrop, .search) .tire-jump {
+  left: 30%;
+  bottom: 30%;
+  width: 8cqw;
+  height: 13cqh;
+  border: 0.6cqmin solid #2b2430;
+  border-bottom: 0;
+}
+
+:where(.backdrop, .search) .tire-jump::after {
+  content: '';
+  position: absolute;
+  top: 18%;
+  left: 50%;
+  width: 5cqh;
+  height: 5cqh;
+  border: 1.4cqh solid #2b2b2b;
+  border-radius: 50%;
+  translate: -50% 0;
+}
+
+:where(.backdrop, .search) .hurdle {
+  left: 60%;
+  bottom: 31%;
+  width: 10cqw;
+  height: 6cqh;
+  background:
+    repeating-linear-gradient(90deg, #d53a15 0 1.4cqw, #ffffff 1.4cqw 2.8cqw) 0 20% / 100% 22% no-repeat,
+    linear-gradient(#2b2430, #2b2430) 0 0 / 0.7cqw 100% no-repeat,
+    linear-gradient(#2b2430, #2b2430) 100% 0 / 0.7cqw 100% no-repeat;
+}
+
+:where(.backdrop, .search) .water-bowl {
+  left: 52%;
+  bottom: 29%;
+  width: 4cqw;
+  height: 1.8cqh;
+  border: 0.4cqmin solid #123d7a;
+  border-radius: 0 0 50% 50%;
+  background: linear-gradient(#9cd6f5 30%, #2a6fd0 30%);
+}
+
+:where(.backdrop, .search) .ball-toy {
+  left: 64%;
+  bottom: 29%;
+  width: 3cqw;
+  height: 3cqw;
+  border: 0.4cqmin solid #4d5a10;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f1fca6, #d8f23c 45%, #9fb81f);
+}
+
+.map-park .bd-floor {
+  background:
+    radial-gradient(circle, #ffffff 0 2px, transparent 3px) 20px 30px / 170px 130px,
+    radial-gradient(circle, #ffe36b 0 2px, transparent 3px) 90px 80px / 170px 130px,
+    repeating-linear-gradient(90deg, #5fae4a 0 70px, #54a042 70px 140px);
+}
+
+/* ---------- vet: a clinic waiting room ---------- */
+
+.map-vet .bd-sky {
+  background: linear-gradient(#e3f4f0, #cfece6 62%);
+}
+
+/* Ceiling with panel lights. */
+:where(.backdrop, .search) .ceiling {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 7%;
+  border-bottom: 0.5cqmin solid #9bbdb6;
+  background:
+    linear-gradient(90deg, transparent 6%, #ffffff 6% 22%, transparent 22% 42%, #ffffff 42% 58%, transparent 58% 78%, #ffffff 78% 94%, transparent 94%) 0 60% / 100% 35% no-repeat,
+    #f1f7f6;
+}
+
+:where(.backdrop, .search) .wainscot {
+  left: 0;
+  right: 0;
+  bottom: 38%;
+  height: 16%;
+  border-top: 0.6cqmin solid #2f7f74;
+  background: repeating-linear-gradient(90deg, #8fcfc4 0 3cqw, #7fc2b6 3cqw 3.3cqw);
+}
+
+:where(.backdrop, .search) .vet-window {
+  top: 16%;
+  left: 6%;
+  width: 18%;
+  height: 30%;
+  border: 1cqmin solid #f7fbfa;
+  outline: 0.4cqmin solid #2f7f74;
+  background:
+    repeating-linear-gradient(180deg, rgb(255 255 255 / 55%) 0 0.5cqh, transparent 0.5cqh 2cqh) 0 0 / 100% 40% no-repeat,
+    linear-gradient(90deg, transparent 48%, #f7fbfa 48% 52%, transparent 52%),
+    linear-gradient(160deg, #a7dcf5, #e6f6fd);
+}
+
+:where(.backdrop, .search) .vet-sign {
+  top: 12%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 1.5cqw;
+  padding: 1.2cqh 2.4cqw;
+  border: 0.6cqmin solid #2f7f74;
+  border-radius: 1cqmin;
+  background: #ffffff;
+  translate: -50% 0;
+}
+
+:where(.backdrop, .search) .vet-cross {
+  position: relative;
+  width: 5cqh;
+  height: 5cqh;
+  background:
+    linear-gradient(#d53a15, #d53a15) 50% 50% / 34% 100% no-repeat,
+    linear-gradient(#d53a15, #d53a15) 50% 50% / 100% 34% no-repeat;
+}
+
+:where(.backdrop, .search) .vet-word {
+  color: #2f7f74;
+  font-family: var(--font-display);
+  font-size: 6cqh;
+  line-height: 1;
+}
+
+/* A health-chart poster with a dog outline on it. */
+:where(.backdrop, .search) .poster {
+  top: 24%;
+  left: 30%;
+  width: 9cqw;
+  height: 20cqh;
+  border: 0.4cqmin solid #2f7f74;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 1.6cqh, #cfe2df 1.6cqh 1.9cqh) 0 62% / 100% 36% no-repeat,
+    #fffdf6;
+}
+
+:where(.backdrop, .search) .poster-dog {
+  position: absolute;
+  top: 10%;
+  left: 14%;
+  width: 72%;
+  height: 34%;
+  background:
+    radial-gradient(ellipse 30% 26% at 72% 30%, #d9a142 96%, transparent 100%),
+    radial-gradient(ellipse 44% 28% at 42% 58%, #d9a142 96%, transparent 100%),
+    linear-gradient(#d9a142, #d9a142) 22% 100% / 8% 40% no-repeat,
+    linear-gradient(#d9a142, #d9a142) 60% 100% / 8% 40% no-repeat;
+}
+
+:where(.backdrop, .search) .paw-frame {
+  top: 26%;
+  left: 64%;
+  width: 7cqw;
+  height: 7cqw;
+  border: 0.8cqmin solid #a8703f;
+  background:
+    radial-gradient(ellipse 22% 18% at 50% 64%, #2f7f74 96%, transparent 100%),
+    radial-gradient(circle at 28% 36%, #2f7f74 0 8%, transparent 9%),
+    radial-gradient(circle at 43% 24%, #2f7f74 0 8%, transparent 9%),
+    radial-gradient(circle at 58% 24%, #2f7f74 0 8%, transparent 9%),
+    radial-gradient(circle at 73% 36%, #2f7f74 0 8%, transparent 9%),
+    #fffdf6;
+}
+
+:where(.backdrop, .search) .clock {
+  top: 16%;
+  right: 8%;
+  width: 9cqh;
+  height: 9cqh;
+  border: 0.6cqmin solid #2f7f74;
+  border-radius: 50%;
+  background:
+    linear-gradient(#2f7f74, #2f7f74) 50% 25% / 0.5cqmin 30% no-repeat,
+    linear-gradient(#2f7f74, #2f7f74) 65% 50% / 30% 0.5cqmin no-repeat,
+    #ffffff;
+}
+
+:where(.backdrop, .search) .vet-door {
+  right: 22%;
+  bottom: 38%;
+  width: 10cqw;
+  height: 38%;
+  border: 0.5cqmin solid #2f7f74;
+  border-bottom: 0;
+  background:
+    linear-gradient(#cfe9f5, #cfe9f5) 50% 18% / 50% 26% no-repeat,
+    radial-gradient(circle at 84% 56%, #c9a13b 0 4%, transparent 5%),
+    #e8f4f1;
+}
+
+/* Reception desk with a monitor and a treat jar. */
+:where(.backdrop, .search) .desk {
+  left: 34%;
+  bottom: 38%;
+  width: 24%;
+  height: 14%;
+  border: 0.5cqmin solid #3b5450;
+  border-bottom: 0;
+  background: linear-gradient(#ffffff 0 14%, #5aa39a 14%);
+}
+
+:where(.backdrop, .search) .monitor {
+  position: absolute;
+  bottom: 100%;
+  left: 18%;
+  width: 22%;
+  height: 80%;
+  border: 0.5cqmin solid #2b2430;
+  border-radius: 0.4cqmin;
+  background: linear-gradient(135deg, #9fd2ee, #3a7bd5);
+}
+
+:where(.backdrop, .search) .treat-jar {
+  position: absolute;
+  bottom: 100%;
+  right: 16%;
+  width: 12%;
+  height: 60%;
+  border: 0.4cqmin solid #3b5450;
+  border-radius: 0.6cqmin 0.6cqmin 1cqmin 1cqmin;
+  background:
+    radial-gradient(circle at 30% 70%, #a8703f 0 14%, transparent 15%),
+    radial-gradient(circle at 66% 56%, #8a5a34 0 14%, transparent 15%),
+    rgb(230 245 250 / 85%);
+}
+
+:where(.backdrop, .search) .plant {
+  left: 2%;
+  bottom: 38%;
+  width: 6cqw;
+  height: 20%;
+  background:
+    radial-gradient(ellipse 20% 46% at 34% 34%, #3e8e4a 96%, transparent 100%),
+    radial-gradient(ellipse 20% 46% at 66% 30%, #4fa85a 96%, transparent 100%),
+    radial-gradient(ellipse 18% 40% at 50% 24%, #3e8e4a 96%, transparent 100%),
+    linear-gradient(#c9643a, #a54d2a) 50% 100% / 60% 32% no-repeat;
+}
+
+:where(.backdrop, .search) .bench {
+  right: 4%;
+  bottom: 38%;
+  width: 14%;
+  height: 7%;
+  border: 0.4cqmin solid #3b5450;
+  border-radius: 0.6cqmin;
+  background: linear-gradient(#6aa59b 50%, transparent 50%);
+}
+
+:where(.backdrop, .search) .scale {
+  left: 62%;
+  bottom: 31%;
+  width: 9cqw;
+  height: 2cqh;
+  border: 0.4cqmin solid #3b5450;
+  border-radius: 0.6cqmin;
+  background: linear-gradient(90deg, #e6eeec 70%, #2b2430 70% 74%, #9fe2c2 74%);
+}
+
+.map-vet .bd-floor {
+  background: repeating-conic-gradient(#f4f8f7 0 25%, #a9d6cf 0 50%) 0 0 / 120px 120px;
+}
+
+/* ---------- pet store: aisles, an aquarium, a cart ---------- */
+
+.map-petco .bd-sky {
+  background: linear-gradient(#f2f0ea, #dedad0 62%);
+}
+
+:where(.backdrop, .search) .ceiling-store {
+  height: 6%;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 8cqw, #ffffff 8cqw 20cqw) 0 55% / 100% 40% no-repeat,
+    #d6d2c8;
+  border-bottom-color: #a39b8d;
+}
+
+:where(.backdrop, .search) .store-sign {
+  top: 8%;
+  left: 50%;
+  padding: 0.8cqh 3cqw;
+  border: 0.6cqmin solid #102a52;
+  border-radius: 1cqmin;
+  background: #1f4f99;
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-size: 5.2cqh;
+  line-height: 1.1;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  translate: -50% 0;
+}
+
+/* Signs hanging over the aisles. */
+:where(.backdrop, .search) .hang-sign {
+  top: 6%;
+  padding: 0.6cqh 1.6cqw;
+  border: 0.4cqmin solid #102a52;
+  background: #d53a15;
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-size: 3.2cqh;
+  text-transform: uppercase;
+  white-space: nowrap;
+  translate: 0 4cqh;
+  animation: sway 4s ease-in-out infinite alternate;
+  transform-origin: 50% -4cqh;
+}
+
+:where(.backdrop, .search) .hang-sign::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  width: 0.3cqmin;
+  height: 4cqh;
+  background: #102a52;
+}
+
+:where(.backdrop, .search) .hang-sign-1 {
+  left: 8%;
+}
+
+:where(.backdrop, .search) .hang-sign-2 {
+  right: 28%;
+  background: #2f9449;
+  animation-delay: -2s;
+}
+
+@keyframes sway {
+  from {
+    rotate: -2deg;
+  }
+
+  to {
+    rotate: 2deg;
+  }
+}
+
+:where(.backdrop, .search) .shelves {
+  left: 0;
+  right: 24%;
+  bottom: 38%;
+  height: 40%;
+  display: grid;
+  grid-template-rows: repeat(3, 1fr);
+  padding: 0 2cqw;
+  border-right: 0.6cqmin solid #6d6656;
+  background: #b9b3a6;
+}
+
+/* Boxes and rounded-top kibble bags in a repeating mix. */
+:where(.backdrop, .search) .shelf {
+  border-bottom: 1cqh solid #6d6656;
+  background:
+    radial-gradient(ellipse 1.8cqw 1.4cqh at 50% 100%, #c97a2e 96%, transparent 100%) 3cqw 0 / 18cqw 30% repeat-x,
+    repeating-linear-gradient(
+      90deg,
+      #d9534f 0 4cqw,
+      transparent 4cqw 4.4cqw,
+      #f0ad4e 4.4cqw 7.4cqw,
+      transparent 7.4cqw 7.8cqw,
+      #5bc0de 7.8cqw 11cqw,
+      transparent 11cqw 11.4cqw,
+      #5cb85c 11.4cqw 14cqw,
+      transparent 14cqw 14.4cqw,
+      #8e6fc4 14.4cqw 17.6cqw,
+      transparent 17.6cqw 18cqw
+    )
+    0 100% / 100% 70% no-repeat;
+}
+
+:where(.backdrop, .search) .shelf:nth-child(2) {
+  background-position: 9cqw 0, 6cqw 100%;
+}
+
+:where(.backdrop, .search) .shelf:nth-child(3) {
+  background-position: 1cqw 0, 11cqw 100%;
+}
+
+/* The fish wall: water, swimming fish, rising bubbles. */
+:where(.backdrop, .search) .aquarium {
+  right: 2%;
+  bottom: 38%;
+  width: 20%;
+  height: 40%;
+  overflow: hidden;
+  border: 0.8cqmin solid #2b2430;
+  background:
+    linear-gradient(transparent 80%, #c9b27a 80% 86%, #8d7a4a 86%),
+    linear-gradient(#7fd3f0, #2a8fc4);
+}
+
+:where(.backdrop, .search) .fish {
+  position: absolute;
+  width: 3cqw;
+  height: 1.6cqh;
+  border-radius: 50%;
+  background: #f0ad4e;
+  animation: swim 9s linear infinite;
+}
+
+:where(.backdrop, .search) .fish::after {
+  content: '';
+  position: absolute;
+  top: 10%;
+  left: -40%;
+  width: 50%;
+  height: 80%;
+  background: inherit;
+  clip-path: polygon(100% 50%, 0 0, 0 100%);
+}
+
+:where(.backdrop, .search) .fish-1 {
+  top: 24%;
+}
+
+:where(.backdrop, .search) .fish-2 {
+  top: 46%;
+  background: #d9534f;
+  animation-duration: 12s;
+  animation-delay: -5s;
+}
+
+:where(.backdrop, .search) .fish-3 {
+  top: 62%;
+  background: #ffe36b;
+  animation-duration: 7s;
+  animation-delay: -2s;
+}
+
+@keyframes swim {
+  from {
+    left: -20%;
+  }
+
+  to {
+    left: 110%;
+  }
+}
+
+:where(.backdrop, .search) .bubbles {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle, rgb(255 255 255 / 80%) 0 0.5cqmin, transparent 0.7cqmin) 30% 0 / 4cqw 6cqh,
+    radial-gradient(circle, rgb(255 255 255 / 70%) 0 0.4cqmin, transparent 0.6cqmin) 70% 2cqh / 5cqw 7cqh;
+  animation: bubbles 3s linear infinite;
+}
+
+@keyframes bubbles {
+  to {
+    background-position:
+      30% -6cqh,
+      70% -5cqh;
+  }
+}
+
+:where(.backdrop, .search) .aisle-sign {
+  top: 20%;
+  right: 3%;
+  padding: 0.6cqh 1.4cqw;
+  border: 0.4cqmin solid #102a52;
+  background: #fff3c4;
+  color: #102a52;
+  font-family: var(--font-display);
+  font-size: 3cqh;
+  white-space: nowrap;
+}
+
+:where(.backdrop, .search) .pet-bed {
+  left: 58%;
+  bottom: 33%;
+  width: 11cqw;
+  height: 5cqh;
+  border: 0.5cqmin solid #43206b;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 40%, #e9e0f5 0 45%, #9a6bd6 47%);
+}
+
+:where(.backdrop, .search) .cart {
+  left: 8%;
+  bottom: 30%;
+  width: 10cqw;
+  height: 9cqh;
+  background:
+    repeating-linear-gradient(90deg, #8a96a0 0 0.3cqw, transparent 0.3cqw 1.2cqw) 10% 0 / 90% 70% no-repeat,
+    repeating-linear-gradient(0deg, #8a96a0 0 0.3cqw, transparent 0.3cqw 1.2cqh) 10% 0 / 90% 70% no-repeat,
+    radial-gradient(circle at 22% 92%, #2b2430 0 6%, transparent 7%),
+    radial-gradient(circle at 82% 92%, #2b2430 0 6%, transparent 7%);
+  border-top: 0.5cqmin solid #d53a15;
+}
+
+.map-petco .bd-floor {
+  background:
+    linear-gradient(90deg, transparent 30%, rgb(255 255 255 / 35%) 45% 55%, transparent 70%),
+    repeating-linear-gradient(90deg, rgb(0 0 0 / 12%) 0 2px, transparent 2px 160px),
+    repeating-linear-gradient(0deg, rgb(0 0 0 / 12%) 0 2px, transparent 2px 160px),
+    linear-gradient(#e9e6df, #c9c4b8);
+}
+
+/* ---------- playground: afternoon, swings, slide, see-saw ---------- */
+
+.map-playground .bd-sky {
+  background: linear-gradient(#ffb36b, #ffe2b0 62%);
+}
+
+:where(.backdrop, .search) .play-sun {
+  top: 14%;
+  right: 16%;
+  width: 14cqh;
+  height: 14cqh;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff6c8, #ffd25a 60%, #ffb23a);
+  box-shadow: 0 0 6cqh rgb(255 210 90 / 60%);
+}
+
+.map-playground .cloud {
+  background: #fff3e0;
+  box-shadow:
+    3cqmin -2.5cqmin 0 0.5cqmin #fff3e0,
+    6cqmin 0 0 #fff3e0;
+}
+
+/* A kite on a long string, bobbing in the breeze. */
+:where(.backdrop, .search) .kite {
+  top: 12%;
+  left: 30%;
+  width: 4cqw;
+  height: 6cqh;
+  background: linear-gradient(135deg, #d53a15 50%, #f4c02a 50%);
+  clip-path: polygon(50% 0, 100% 45%, 50% 100%, 0 45%);
+  animation: kite 3s ease-in-out infinite alternate;
+}
+
+@keyframes kite {
+  to {
+    translate: 1.5cqw 1.5cqh;
+    rotate: 8deg;
+  }
+}
+
+/* Houses along the back of the park: one shape each, wall and pitched roof. */
+:where(.backdrop, .search) .houses {
+  left: 2%;
+  right: 2%;
+  bottom: 38%;
+  height: 14%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  opacity: 0.85;
+}
+
+:where(.backdrop, .search) .house {
+  width: 9%;
+  height: 100%;
+  clip-path: polygon(0 42%, 50% 0, 100% 42%, 100% 100%, 0 100%);
+  background-image:
+    linear-gradient(rgb(90 40 30 / 55%), rgb(90 40 30 / 55%)),
+    linear-gradient(#fff3c4, #fff3c4);
+  background-size:
+    100% 42%,
+    24% 22%;
+  background-position:
+    0 0,
+    50% 72%;
+  background-repeat: no-repeat;
+}
+
+:where(.backdrop, .search) .house:nth-child(2) {
+  height: 80%;
+}
+
+:where(.backdrop, .search) .house:nth-child(4) {
+  height: 90%;
+}
+
+:where(.backdrop, .search) .tree-solo {
+  bottom: 38%;
+  width: 9cqw;
+  height: 26%;
+  background:
+    radial-gradient(circle at 50% 35%, #4b8b3b 46%, transparent 48%),
+    linear-gradient(#7a4d2b, #7a4d2b) 50% 100% / 14% 45% no-repeat;
+}
+
+:where(.backdrop, .search) .tree-solo-1 {
+  left: 40%;
+}
+
+:where(.backdrop, .search) .tree-solo-2 {
+  left: 92%;
+  width: 7cqw;
+  height: 20%;
+}
+
+:where(.backdrop, .search) .swing-frame {
+  left: 6%;
+  bottom: 38%;
+  width: 22%;
+  height: 34%;
+  border: 1cqmin solid #2f5a8a;
+  border-bottom: 0;
+}
+
+:where(.backdrop, .search) .swing {
+  position: absolute;
+  top: 0;
+  width: 18%;
+  height: 70%;
+  border-left: 0.4cqmin solid #2b2b2b;
+  border-right: 0.4cqmin solid #2b2b2b;
+  border-bottom: 1.2cqh solid #d53a15;
+  transform-origin: 50% 0;
+  animation: swing 2.4s ease-in-out infinite alternate;
+}
+
+:where(.backdrop, .search) .swing-1 {
+  left: 18%;
+  rotate: -6deg;
+}
+
+:where(.backdrop, .search) .swing-2 {
+  left: 60%;
+  height: 62%;
+  animation-delay: -1.2s;
+}
+
+@keyframes swing {
+  from {
+    rotate: -10deg;
+  }
+
+  to {
+    rotate: 10deg;
+  }
+}
+
+:where(.backdrop, .search) .monkey-bars {
+  left: 30%;
+  bottom: 38%;
+  width: 14%;
+  height: 22%;
+  border: 0.8cqmin solid #2f9449;
+  border-bottom: 0;
+  background: repeating-linear-gradient(90deg, #2f9449 0 0.6cqw, transparent 0.6cqw 2.4cqw) 0 0 / 100% 0.8cqmin no-repeat;
+}
+
+:where(.backdrop, .search) .slide {
+  right: 8%;
+  bottom: 38%;
+  width: 20%;
+  height: 32%;
+  background:
+    linear-gradient(#3a7bd5, #3a7bd5) 0 0 / 0.9cqw 100% no-repeat,
+    repeating-linear-gradient(0deg, #3a7bd5 0 0.5cqw, transparent 0.5cqw 4cqh) 0 0 / 6% 100% no-repeat,
+    linear-gradient(to top right, transparent 49%, #f4c02a 49% 62%, transparent 62%);
+}
+
+:where(.backdrop, .search) .seesaw {
+  left: 50%;
+  bottom: 31%;
+  width: 12cqw;
+  height: 1.4cqh;
+  border: 0.4cqmin solid #7c1d08;
+  border-radius: 0.6cqmin;
+  background: #d53a15;
+  rotate: -8deg;
+  animation: seesaw 3s ease-in-out infinite alternate;
+}
+
+/* The pivot it rocks on. */
+:where(.backdrop, .search) .seesaw::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: 3cqw;
+  height: 3cqh;
+  background: #2f5a8a;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  translate: -50% 0;
+  rotate: 8deg;
+}
+
+@keyframes seesaw {
+  to {
+    rotate: 8deg;
+  }
+}
+
+:where(.backdrop, .search) .sandbox {
+  left: 14%;
+  bottom: 29%;
+  width: 16cqw;
+  height: 4cqh;
+  border: 0.6cqmin solid #8a5a34;
+  background:
+    radial-gradient(circle at 30% 40%, #d53a15 0 6%, transparent 7%),
+    radial-gradient(circle, #e9cf8f 0 1px, transparent 2px) 0 0 / 8px 6px,
+    #f2dca0;
+}
+
+.map-playground .bd-floor {
+  background:
+    radial-gradient(circle, rgb(120 72 30 / 55%) 0 2px, transparent 3px) 0 0 / 22px 18px,
+    radial-gradient(circle, rgb(255 230 180 / 60%) 0 1.5px, transparent 2.5px) 11px 9px / 22px 18px,
+    linear-gradient(#d39a5e, #b97a42);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop * {
+    animation: none !important;
+  }
+}

@@ -92,3 +92,17 @@
     padding: 32px 16px;
   }
 }
+
+.login-pack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 8px;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 640px) {
+  .login-pack .dog-sprite {
+    width: 64px;
+    height: 64px;
+  }
+}

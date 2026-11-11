@@ -59,6 +59,52 @@
 }
 
 /* Phone: the nav becomes a tab bar along the bottom. */
+.sound-toggle {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--muted);
+}
+
+.sound-toggle:hover {
+  color: var(--text);
+}
+
+.sound-toggle svg {
+  width: 20px;
+  height: 20px;
+  fill: currentcolor;
+}
+
+.sound-toggle .sound-stroke {
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.topbar-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Your dog, peeking from the bar at 1x. Links to the picker on Home. */
+.topbar-dog {
+  display: block;
+  height: 60px;
+  overflow: hidden;
+}
+
+.topbar-dog .dog-sprite {
+  margin-top: -2px;
+}
+
 @media (max-width: 760px) {
   .topbar-inner {
     justify-content: space-between;

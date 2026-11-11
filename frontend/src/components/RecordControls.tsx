@@ -44,7 +44,13 @@ export function RecordControls({
         />
         <span>Countdown</span>
       </label>
-      <button className="button button-primary button-record" data-live={live} onClick={onPress} disabled={disabled}>
+      <button
+        className="button button-primary button-record"
+        data-live={live}
+        data-sfx="off"
+        onClick={onPress}
+        disabled={disabled}
+      >
         {label}
       </button>
     </div>

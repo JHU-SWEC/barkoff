@@ -1,3 +1,20 @@
+/* Bones scattered over the page background on Home only (sprites/bones.png, drawn by
+   scripts/sprites.mjs). The empty .bone-field marker switches them on; they're layered into the
+   body's own background, over the halftone, so nothing paints over them. */
+.bone-field {
+  display: none;
+}
+
+body:has(.bone-field) {
+  background-image:
+    url('/sprites/bones.png'),
+    radial-gradient(rgb(28 23 20 / 7%) 1px, transparent 1.5px);
+  background-size:
+    240px 240px,
+    7px 7px;
+  image-rendering: pixelated;
+}
+
 /* The two modes as a split fight poster, rays bursting from the VS badge. */
 .fight-card {
   position: relative;
@@ -158,6 +175,187 @@
 
   .fight-solo:hover .fight-title,
   .fight-duel:hover .fight-title {
+    transform: none;
+  }
+}
+
+/* Dogs on the poster: yours sits on the solo side, two square off on the duel side. */
+.fight-side {
+  position: relative;
+}
+
+.fight-dog-solo {
+  position: absolute;
+  top: 8px;
+  right: 72px;
+}
+
+.fight-dogs {
+  position: absolute;
+  top: 24px;
+  left: 64px;
+  display: flex;
+  gap: 4px;
+}
+
+.fight-title,
+.fight-copy,
+.fight-cta,
+.fight-side .kicker {
+  position: relative;
+  z-index: 1;
+}
+
+/* Dog picker: the chosen dog on a lit stage, the other seven as a grid of trading cards. */
+.dog-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 0;
+  margin-bottom: var(--gap);
+  padding: 0;
+  overflow: hidden;
+  scroll-margin-top: 80px;
+}
+
+.dog-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 24px;
+  background:
+    radial-gradient(ellipse 46% 9% at 50% 76%, rgb(0 0 0 / 45%), transparent 70%),
+    radial-gradient(circle at 50% 40%, #3a3029, var(--ink) 70%);
+}
+
+.dog-stage .kicker {
+  position: absolute;
+  top: 20px;
+  left: 24px;
+  color: var(--ball);
+}
+
+.dog-stage .dog-sprite {
+  margin-bottom: 4px;
+}
+
+.dog-plate {
+  text-align: center;
+}
+
+.dog-plate-name {
+  font-family: var(--font-display);
+  font-size: 40px;
+  line-height: 1.1;
+  text-transform: uppercase;
+  color: var(--ball);
+}
+
+.dog-choices {
+  padding: var(--pad);
+}
+
+.dog-choices > .quiet {
+  margin-top: 4px;
+}
+
+.dog-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.dog-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 6px 10px;
+  overflow: hidden;
+  border: 2px solid var(--rule);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  text-align: center;
+  transition:
+    border-color 120ms ease,
+    transform 120ms ease;
+}
+
+.dog-option input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: var(--cursor-pointer);
+}
+
+.dog-option:hover {
+  border-color: var(--ink);
+  transform: translateY(-2px);
+}
+
+.dog-option:has(input:checked) {
+  border-color: var(--ink);
+  background: var(--ball);
+}
+
+.dog-option:has(input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* The whole 64px grid fits inside the tile, ears, tails and the dachshund's length included. */
+.dog-option .dog-sprite {
+  width: min(96px, 100%);
+  height: auto;
+  aspect-ratio: 1;
+  margin: 4px 0 2px;
+}
+
+.dog-option-name {
+  font-family: var(--font-display);
+  font-size: 17px;
+  line-height: 22px;
+  text-transform: uppercase;
+}
+
+@media (max-width: 960px) {
+  .dog-picker {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dog-stage {
+    min-height: 320px;
+  }
+}
+
+@media (max-width: 640px) {
+  .fight-dog-solo {
+    top: 4px;
+    right: 8px;
+    width: 128px;
+    height: 128px;
+  }
+
+  /* No room beside the duel copy on a phone. */
+  .fight-dogs {
+    display: none;
+  }
+
+  .dog-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dog-option {
+    transition: none;
+  }
+
+  .dog-option:hover {
     transform: none;
   }
 }

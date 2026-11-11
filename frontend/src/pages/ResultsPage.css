@@ -109,3 +109,209 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Each fighter's dog stands in the card's top corner. */
+.fighter {
+  position: relative;
+}
+
+.fighter-dog {
+  position: absolute;
+  top: 8px;
+  right: 16px;
+}
+
+@media (max-width: 640px) {
+  .fighter-dog {
+    width: 96px;
+    height: 96px;
+  }
+}
+
+/* ---------- duel breakdown ---------- */
+
+.verdict-note {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* Loudness and likeness bars, each with what's behind the number. */
+.bar {
+  margin-top: 14px;
+}
+
+.bar-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.bar-track {
+  height: 12px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-chip);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: var(--ink);
+}
+
+.bar-loud .bar-fill {
+  background: var(--flare);
+}
+
+.bar-detail {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: var(--fs-small);
+  line-height: 16px;
+}
+
+.formula {
+  margin-top: 14px;
+  padding: 6px 10px;
+  border: 1px dashed var(--rule);
+  border-radius: var(--radius-chip);
+  font-family: var(--mono);
+  font-size: var(--fs-small);
+}
+
+.formula-foul {
+  font-family: var(--font);
+}
+
+.fighter-averages {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+}
+
+.fighter-averages div + div {
+  padding-left: 12px;
+  border-left: 1px solid var(--rule);
+}
+
+.fighter-averages dt {
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+
+.fighter-averages dd {
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 28px;
+}
+
+/* Round by round: both barks side by side, the winner's highlighted. */
+.rounds-card {
+  margin-bottom: var(--gap);
+}
+
+.round-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.round {
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+}
+
+.round:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.round-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.round-index {
+  font-family: var(--font-display);
+  font-size: 20px;
+  text-transform: uppercase;
+}
+
+.round-barks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.bark-cell {
+  padding: 12px 14px;
+  border: 2px solid var(--rule);
+  border-radius: var(--radius-control);
+}
+
+.bark-cell-won {
+  border-color: var(--ink);
+  background: color-mix(in srgb, var(--ball) 35%, var(--surface));
+}
+
+.bark-cell-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bark-cell-name {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bark-cell-score {
+  font-family: var(--font-display);
+  font-size: 32px;
+  line-height: 36px;
+}
+
+.bark-cell-foul {
+  margin-top: 4px;
+  color: var(--negative);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+
+.bark-cell .bar {
+  margin-top: 8px;
+}
+
+.scoring-explainer {
+  margin-bottom: var(--gap);
+}
+
+.scoring-explainer dd {
+  max-width: 60ch;
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .round-barks {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .scoring-explainer .row {
+    display: grid;
+    gap: 2px;
+  }
+
+  .scoring-explainer dd {
+    text-align: left;
+  }
+}

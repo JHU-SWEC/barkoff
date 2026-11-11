@@ -31,6 +31,13 @@ const MAX_GONE_S = 1
 
 const STORAGE_KEY = 'barkoff.camera'
 
+/** Where the face is in the camera frame, in video pixels, smoothed. */
+export interface FaceBox {
+  cx: number
+  cy: number
+  size: number
+}
+
 export type Fit = 'none' | 'close' | 'far' | 'off-centre' | 'ok'
 export type CameraStatus = 'off' | 'starting' | 'on' | 'error'
 
@@ -109,6 +116,8 @@ export function useHeadGuide() {
   const streamRef = useRef<MediaStream | null>(null)
   const fitRef = useRef<Fit>('none')
   const watchRef = useRef<PositionCheck | null>(null)
+  // Read every frame by whoever draws the face (the duel pastes it on the dog), so a ref, not state.
+  const faceRef = useRef<FaceBox | null>(null)
   // Bumped on unmount, so an open() still waiting on the camera knows nobody wants it any more.
   const openIdRef = useRef(0)
 
@@ -201,6 +210,15 @@ export function useHeadGuide() {
           .sort((a, b) => b.height - a.height)[0]
 
         if (box) {
+          const seen = { cx: box.originX + box.width / 2, cy: box.originY + box.height / 2, size: Math.max(box.width, box.height) }
+          const prev = faceRef.current
+          faceRef.current = prev
+            ? {
+                cx: prev.cx + SMOOTHING * (seen.cx - prev.cx),
+                cy: prev.cy + SMOOTHING * (seen.cy - prev.cy),
+                size: prev.size + SMOOTHING * (seen.size - prev.size),
+              }
+            : seen
           const seenSize = box.height / vh
           size = lastSeen ? size + SMOOTHING * (seenSize - size) : seenSize
           centreX = (box.originX + box.width / 2 - x0) / visibleW
@@ -208,7 +226,10 @@ export function useHeadGuide() {
         }
         const lost = now - lastSeen > LOST_AFTER_MS
         const next: Fit = lost ? 'none' : classify(size, centreX)
-        if (lost) lastSeen = 0
+        if (lost) {
+          lastSeen = 0
+          faceRef.current = null
+        }
 
         const watch = watchRef.current
         if (watch) {
@@ -245,5 +266,5 @@ export function useHeadGuide() {
     return watch && streamRef.current ? watch : undefined
   }, [])
 
-  return { status, error, fit, attachVideo, start, stop, beginWatch, endWatch }
+  return { status, error, fit, attachVideo, video, faceRef, start, stop, beginWatch, endWatch }
 }

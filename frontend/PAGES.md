@@ -27,12 +27,12 @@ One part of this isn't wired yet: nothing sends you to Login, so the site opens 
 | Route | Page | Status | What's real today | What it's waiting on |
 | --- | --- | --- | --- | --- |
 | `/login` | Login | Stub | Continue as guest | Auth provider; email, Google and Apple sign-in |
-| `/` | Home | Partly real | Mode cards, Mic check, best solo bark | Accounts for Your record; leaderboard API for Top dogs |
+| `/` | Home | Partly real | Mode cards, dog picker (8 dogs, saved in this browser), Mic check, best solo bark | Accounts for Your record and the dog pick; leaderboard API for Top dogs |
 | `/solo` | Single player | **Real** | The whole recorder: record, countdown, calibration, camera check, scoring; saves the result and personal best in this browser, then links to Results | Saving the personal best to an account |
-| `/duel` | Duel | Stub | Layout only, sample opponent | Matchmaking queue, realtime server, synced rounds |
-| `/results` | Results | Partly real | `?mode=solo`: the latest scored take, its breakdown and the personal best. Without it: sample duel | Duels for real rounds |
+| `/duel` | Duel | **Real** (guests) | Full-screen fighting game. Camera gate (fit the outline to continue), Elo queue with a walking search screen or practice vs a bot (easy, normal, hard), stage roulette, best of three with a 5 s bark window on the server's clock, your face on your dog, both barks scored by the server, Elo update. Open two tabs to duel yourself | Accounts (guest ratings live in server memory); a socket instead of polling |
+| `/results` | Results | Partly real | `?mode=solo`: the latest scored take. From a finished duel: its real rounds. Otherwise: sample duel | Loading a past duel by id |
 | `/profile` | Profile | Partly real | Mic check, best solo bark | Accounts, Elo, match history, clip replay |
-| `/leaderboard` | Leaderboard | Stub | Layout only, sample players | Leaderboard API |
+| `/leaderboard` | Leaderboard | Partly real | Duel players by Elo from the server when it has any; sample players otherwise | Accounts, so ratings survive a restart; best bark per player |
 
 Anything else redirects to Home. Sample content lives in `src/sampleData.ts`, and every stub says so on the page. As a real API lands, delete its export and the compiler will point at each place to replace.
 
@@ -41,8 +41,8 @@ Anything else redirects to Home. Sample content lives in `src/sampleData.ts`, an
 1. ~~**Solo to Results.**~~ Done: scored takes are saved in `src/soloResults.ts` (localStorage) and shown on Results. Takes' audio still doesn't survive navigation.
 2. **Mic check gate.** Send first-time players to calibration before their first bark.
 3. **Accounts.** Login, then the real Home and Profile numbers.
-4. **Duel.** Queue, match found, synced rounds, then Results and Elo.
-5. **Leaderboard.** Comes almost free once duels record Elo.
+4. ~~**Duel.**~~ Done for guests: `backend/duels.py` and `matchmaking.py`, `src/useDuel.ts`. Moves onto accounts with step 3.
+5. ~~**Leaderboard.**~~ Reads `/api/leaderboard`; real once ratings are saved to accounts.
 
 ## Decisions needed
 

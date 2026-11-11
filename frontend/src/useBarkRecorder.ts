@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { analyse, amplitudeToDb, FLOOR_DB, type Analysis, type LevelPoint } from './audio'
+import { setMicOpen } from './sfx'
 import { CALIBRATION_S, loadCalibration, measureCalibration, saveCalibration, type Calibration } from './calibration'
 
 // Raw mic input: the scorer measures loudness itself, so the browser must not
@@ -271,6 +272,12 @@ export function useBarkRecorder() {
     () => capture({ kind: 'calibration', lengthS: CALIBRATION_S, countdown: false }),
     [capture],
   )
+
+  // Click barks stay quiet from the moment the mic opens until the take is analysed.
+  useEffect(() => {
+    setMicOpen(status !== 'idle' && status !== 'error')
+    return () => setMicOpen(false)
+  }, [status])
 
   return { status, plan, cue, error, takes, live, mic, calibration, record, calibrate, stop }
 }
