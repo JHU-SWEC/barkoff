@@ -1,9 +1,10 @@
 import { Link } from 'react-router'
-import { BarkMark } from '../components/BarkMark'
+import { DogSprite } from '../components/DogSprite'
 import { CalibrationSummary } from '../components/CalibrationSummary'
 import { Figure } from '../components/Figure'
 import { PageHeader } from '../components/PageHeader'
 import { StubNote } from '../components/StubNote'
+import { useDog } from '../dogs'
 import { loadSoloRecord } from '../soloResults'
 import { SAMPLE_HISTORY, SAMPLE_ME } from '../sampleData'
 import './ProfilePage.css'
@@ -11,6 +12,7 @@ import './ProfilePage.css'
 export default function ProfilePage() {
   const played = SAMPLE_ME.wins + SAMPLE_ME.losses
   const { best } = loadSoloRecord()
+  const dog = useDog()
 
   return (
     <>
@@ -23,10 +25,16 @@ export default function ProfilePage() {
           <section className="card" aria-label="Player">
             <div className="profile-id">
               <div className="profile-avatar">
-                <BarkMark className="profile-mark" />
+                <DogSprite dog={dog} scale={1.5} className="profile-dog" label={`${dog.name} the ${dog.breed}`} />
               </div>
               <div>
                 <h2>{SAMPLE_ME.name}</h2>
+                <p className="quiet">
+                  With {dog.name} the {dog.breed} ·{' '}
+                  <Link className="text-button" to="/#your-dog">
+                    Change dog
+                  </Link>
+                </p>
                 <Link className="text-button" to="/login">
                   Sign in to save your barks
                 </Link>

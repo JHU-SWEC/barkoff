@@ -42,7 +42,7 @@ export function CalibrationPanel({
         </p>
       )}
       <div className="card-actions">
-        <button className="button button-secondary" onClick={onCalibrate} disabled={disabled}>
+        <button className="button button-secondary" data-sfx="off" onClick={onCalibrate} disabled={disabled}>
           {calibration ? 'Recalibrate' : 'Calibrate 5 s'}
         </button>
         {calibration && (

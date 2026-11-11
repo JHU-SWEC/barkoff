@@ -34,14 +34,12 @@
   background: var(--ball);
 }
 
-.profile-mark {
-  width: 56px;
-  height: 56px;
-  fill: var(--ink);
+.profile-avatar {
+  overflow: hidden;
 }
 
-.profile-mark .mark-eye {
-  fill: var(--ball);
+.profile-dog {
+  margin-top: 4px;
 }
 
 .figures-profile {

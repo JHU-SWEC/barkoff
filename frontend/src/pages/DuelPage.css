@@ -1,148 +1,2153 @@
-.duel-layout {
+/* The duel as a full-screen fighting game. Layers, back to front: arena backdrop and fighters,
+   the BARK! flash, Street Fighter bars on top, camera and Smash cards at the bottom, the
+   announcer's big words, then menus. Stages are in components/Backdrop.css. Fighters and effects
+   are placed by two numbers:
+   --ground (floor line above the bottom) and --dog (sprite size). */
+.game {
+  --ground: 17vh;
+  --dog: clamp(176px, min(28vw, 44vh), 400px);
+  --p1: #d53a15;
+  --p2: #2a6fd0;
+  --p2-light: #5c97ea;
+  --stroke: #1c1714;
+
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  overflow: hidden;
+  background: #120e0c;
+  color: #f7f0e2;
+  user-select: none;
+}
+
+.game-world,
+:where(.game) .backdrop,
+:where(.game) .stage {
+  position: absolute;
+  inset: 0;
+}
+
+/* ---------- fighters ---------- */
+
+:where(.game) .fighter {
+  --dir: 1;
+
+  position: absolute;
+  bottom: var(--ground);
+  left: calc(26% - var(--dog) / 2);
+  width: var(--dog);
+  height: var(--dog);
+  animation: spawn 900ms cubic-bezier(0.3, 0, 0.4, 1) backwards;
+}
+
+:where(.game) .fighter-them {
+  --dir: -1;
+
+  left: calc(74% - var(--dog) / 2);
+  animation-delay: 350ms;
+}
+
+:where(.game) .fighter-sprite {
+  width: 100%;
+  height: 100%;
+}
+
+:where(.game) .fighter-shadow {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: -5%;
+  height: 14%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(0 0 0 / 70%), transparent);
+}
+
+/* Spawn: a beam of light, then the dog drops in and lands with a squash. */
+:where(.game) .spawn-beam {
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: 0;
+  height: 150vh;
+  background: linear-gradient(transparent, rgb(216 242 60 / 85%) 85%, #ffffff);
+  mix-blend-mode: screen;
+  opacity: 0;
+  animation: beam 1s ease-out;
+  animation-delay: inherit;
+  pointer-events: none;
+}
+
+@keyframes spawn {
+  0% {
+    transform: translateY(-110vh) scale(0.7);
+  }
+
+  55% {
+    transform: translateY(0) scale(1.15, 0.8);
+  }
+
+  72% {
+    transform: translateY(-8%) scale(0.95, 1.05);
+  }
+
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes beam {
+  0% {
+    opacity: 1;
+    transform: scaleX(1.4);
+  }
+
+  60% {
+    opacity: 0.8;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+}
+
+:where(.game) .fighter-lunge {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+:where(.game) .fighter-lunge .fighter-sprite {
+  animation: idle 760ms steps(2) infinite;
+}
+
+@keyframes idle {
+  50% {
+    translate: 0 -2%;
+  }
+}
+
+:where(.game) .fighter-lunge[data-attack='true'] {
+  animation: lunge 280ms ease-out;
+}
+
+@keyframes lunge {
+  35% {
+    transform: translateX(calc(var(--dir) * 16%)) scale(1.06, 0.94);
+  }
+}
+
+:where(.game) .fighter-hurt {
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 100%;
+}
+
+:where(.game) .fighter-hurt[data-hurt='true'] {
+  animation: hurt 420ms ease-out;
+}
+
+@keyframes hurt {
+  0%,
+  40% {
+    filter: brightness(4) saturate(0);
+  }
+
+  20%,
+  60% {
+    filter: none;
+  }
+
+  30% {
+    transform: translateX(calc(var(--dir) * -12%)) rotate(calc(var(--dir) * -6deg));
+  }
+}
+
+/* Win: bounce for joy. Lose: flattened like a pancake, seeing stars. */
+:where(.game) .fighter-win .fighter-lunge {
+  animation: victory 560ms ease-in-out 1s infinite;
+}
+
+@keyframes victory {
+  50% {
+    transform: translateY(-18%) scale(0.96, 1.06);
+  }
+}
+
+:where(.game) .fighter-lose .fighter-hurt {
+  animation: pancake 500ms cubic-bezier(0.5, 0, 0.7, 1.4) 600ms forwards;
+}
+
+@keyframes pancake {
+  to {
+    transform: scale(1.3, 0.42);
+    filter: saturate(0.5) brightness(0.85);
+  }
+}
+
+:where(.game) .fighter-lose .fighter-sprite {
+  animation: none;
+}
+
+:where(.game) .dizzy {
+  position: absolute;
+  bottom: 38%;
+  left: 50%;
+  color: var(--ball);
+  font-size: calc(var(--dog) * 0.12);
+  letter-spacing: 0.2em;
+  white-space: nowrap;
+  translate: -50% 0;
+  animation: dizzy 1.2s linear 1.1s infinite backwards;
+  text-shadow: 2px 2px 0 var(--stroke);
+}
+
+@keyframes dizzy {
+  from {
+    transform: rotateY(0deg);
+  }
+
+  to {
+    transform: rotateY(360deg);
+  }
+}
+
+:where(.game) .fighter-ghost {
+  animation: none;
+}
+
+:where(.game) .fighter-ghost .fighter-sprite {
+  filter: brightness(0) invert(0.12);
+  animation: none;
+}
+
+:where(.game) .ghost-mark {
+  position: absolute;
+  inset: 0;
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-  gap: var(--gap);
-  align-items: start;
+  place-items: center;
+  color: var(--ball);
+  font-family: var(--font-display);
+  font-size: calc(var(--dog) * 0.4);
+  -webkit-text-stroke: 4px var(--stroke);
+  paint-order: stroke fill;
 }
 
-/* Tale of the tape: stats down the middle, one fighter either side. */
-.tape {
-  padding: 32px;
+:where(.game) .shake-a {
+  animation: shake-a 300ms;
 }
 
-.tape-names {
+:where(.game) .shake-b {
+  animation: shake-b 300ms;
+}
+
+@keyframes shake-a {
+  20% {
+    translate: -10px 6px;
+  }
+
+  40% {
+    translate: 9px -6px;
+  }
+
+  60% {
+    translate: -6px 3px;
+  }
+
+  80% {
+    translate: 3px -2px;
+  }
+}
+
+@keyframes shake-b {
+  20% {
+    translate: -10px 6px;
+  }
+
+  40% {
+    translate: 9px -6px;
+  }
+
+  60% {
+    translate: -6px 3px;
+  }
+
+  80% {
+    translate: 3px -2px;
+  }
+}
+
+:where(.game) .flash {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: #ffffff;
+  pointer-events: none;
+  animation: flash 320ms ease-out forwards;
+}
+
+@keyframes flash {
+  from {
+    opacity: 0.9;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+/* ---------- Street Fighter bars ---------- */
+
+:where(.game) .hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
+  align-items: start;
   gap: 16px;
+  padding: 16px 24px;
+  background: linear-gradient(rgb(15 11 10 / 80%), transparent);
 }
 
-.tape-name {
-  font-family: var(--font-display);
-  font-size: 52px;
-  line-height: 1.1;
-  text-transform: uppercase;
-  color: var(--ball);
+:where(.game) .hp {
+  display: flex;
+  gap: 12px;
+  min-width: 0;
 }
 
-.tape-name-them {
+:where(.game) .hp-them {
+  flex-direction: row-reverse;
   text-align: right;
-  color: #ff7a57;
 }
 
-.tape-vs {
+:where(.game) .hp-portrait {
+  flex-shrink: 0;
+  border: 3px solid var(--ball);
+  border-radius: 4px;
+  background: #2a1d17;
+  box-shadow: 4px 4px 0 var(--stroke);
+}
+
+:where(.game) .hp-them .hp-portrait {
+  border-color: var(--p2-light);
+}
+
+:where(.game) .portrait {
+  display: block;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+
+:where(.game) .portrait-empty {
   display: grid;
   place-items: center;
   width: 64px;
   height: 64px;
-  border-radius: 50%;
-  background: var(--flare);
-  color: #ffffff;
+  color: var(--ball);
+  font-family: var(--font-display);
+  font-size: 36px;
+}
+
+:where(.game) .hp-body {
+  flex: 1;
+  min-width: 0;
+}
+
+:where(.game) .hp-name {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+:where(.game) .hp-them .hp-name {
+  flex-direction: row-reverse;
+}
+
+:where(.game) .hp-name-text {
+  min-width: 0;
+  overflow: hidden;
   font-family: var(--font-display);
   font-size: 26px;
-  transform: rotate(-8deg);
+  line-height: 30px;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-shadow: 3px 3px 0 var(--stroke);
 }
 
-.tape-rows {
-  margin-top: 24px;
-}
-
-.tape-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 120px minmax(0, 1fr);
-  align-items: center;
-  min-height: 52px;
-  border-top: 1px solid var(--rule);
-}
-
-.tape-row dt {
-  color: var(--muted);
+:where(.game) .hp-sub {
+  flex-shrink: 0;
+  color: #d9ccb6;
   font-family: var(--mono);
-  font-size: 11px;
-  text-align: center;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 
-.tape-row dd {
+/* Slanted bars that drain toward the middle, with a white trail behind the damage. */
+:where(.game) .hp-track {
+  position: relative;
+  height: 24px;
+  margin-top: 4px;
+  border: 3px solid var(--stroke);
+  background: #4a140a;
+  transform: skewX(-18deg);
+  box-shadow: 4px 4px 0 rgb(0 0 0 / 50%);
+}
+
+:where(.game) .hp-them .hp-track {
+  transform: skewX(18deg);
+}
+
+:where(.game) .hp-trail,
+:where(.game) .hp-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+}
+
+:where(.game) .hp-them .hp-trail,
+:where(.game) .hp-them .hp-fill {
+  left: auto;
+  right: 0;
+}
+
+:where(.game) .hp-trail {
+  background: #ffffff;
+  transition: width 700ms ease-in 1100ms;
+}
+
+:where(.game) .hp-fill {
+  background: linear-gradient(#f1fca6, var(--ball) 45%, #9fb81f);
+  transition: width 240ms ease-out 650ms;
+}
+
+:where(.game) .pips {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+:where(.game) .hp-them .pips {
+  justify-content: flex-end;
+}
+
+:where(.game) .pip {
+  image-rendering: pixelated;
+  filter: grayscale(1) brightness(0.5);
+}
+
+:where(.game) .pip-won {
+  filter: drop-shadow(0 0 6px var(--ball));
+}
+
+:where(.game) .hud-centre {
+  display: grid;
+  justify-items: center;
+  min-width: 96px;
+  padding: 6px 14px 8px;
+  border: 3px solid var(--ball);
+  border-radius: 6px;
+  background: var(--stroke);
+  box-shadow: 4px 4px 0 rgb(0 0 0 / 50%);
+}
+
+:where(.game) .hud-round {
+  color: var(--ball);
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+:where(.game) .hud-timer,
+:where(.game) .hud-vs {
   font-family: var(--font-display);
-  font-size: 28px;
-  line-height: 36px;
+  font-size: 40px;
+  line-height: 44px;
 }
 
-.tape-row dd:last-child {
-  text-align: right;
+/* ---------- camera gate and bark meter ---------- */
+
+/* Before a match: the camera, big and centred, with the outline to fit into. */
+:where(.game) .gate {
+  position: absolute;
+  inset: 0;
+  z-index: 35;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 14px;
+  padding: 96px 16px 24px;
+  background: radial-gradient(ellipse at 50% 50%, rgb(10 8 7 / 55%), rgb(10 8 7 / 85%));
+  text-align: center;
 }
 
-.tape-actions {
+/* After: out of sight but still playing, for the detector and the face on your dog. */
+:where(.game) .gate-closed {
+  inset: auto;
+  width: 2px;
+  height: 2px;
+  padding: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+:where(.game) .gate-title {
+  font-family: var(--font-display);
+  font-size: clamp(36px, 6vmin, 64px);
+  line-height: 1;
+  text-transform: uppercase;
+  -webkit-text-stroke: 6px var(--stroke);
+  paint-order: stroke fill;
+  text-shadow: 6px 6px 0 var(--stroke);
+}
+
+:where(.game) .gate-frame {
+  position: relative;
+  width: min(560px, 86vw, calc((100vh - 300px) * 4 / 3));
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 5px solid var(--stroke);
+  border-radius: 8px;
+  background: #2a1d17;
+  box-shadow:
+    0 0 0 3px #f7f0e2,
+    10px 10px 0 rgb(0 0 0 / 50%);
+}
+
+:where(.game) .gate[data-fit='ok'] .gate-frame {
+  box-shadow:
+    0 0 0 4px var(--ball),
+    0 0 40px rgb(216 242 60 / 50%),
+    10px 10px 0 rgb(0 0 0 / 50%);
+}
+
+:where(.game) .gate[data-fit='close'] .gate-frame,
+:where(.game) .gate[data-fit='none'] .gate-frame {
+  box-shadow:
+    0 0 0 4px var(--p1),
+    10px 10px 0 rgb(0 0 0 / 50%);
+}
+
+:where(.game) .gate video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+:where(.game) .gate-outline {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 4;
+  stroke-dasharray: 10 8;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 3px rgb(0 0 0 / 70%));
+}
+
+:where(.game) .gate[data-fit='ok'] .gate-outline {
+  stroke: var(--ball);
+  stroke-dasharray: none;
+}
+
+:where(.game) .gate[data-fit='close'] .gate-outline,
+:where(.game) .gate[data-fit='none'] .gate-outline {
+  stroke: var(--p1);
+}
+
+:where(.game) .gate[data-fit='off'] .gate-outline {
+  stroke: #6d5f53;
+}
+
+/* Fills across the bottom while you hold still in the outline; the menu opens when it's full. */
+:where(.game) .gate-hold {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 8px;
+  width: 100%;
+  background: var(--ball);
+  transform-origin: 0 50%;
+  animation: hold 900ms linear both;
+}
+
+@keyframes hold {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+:where(.game) .gate-start {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: max-content;
+  height: 46px;
+  padding: 0 18px;
+  border: 3px solid var(--stroke);
+  border-radius: 4px;
+  background: var(--ball);
+  color: var(--stroke);
+  font-family: var(--font-display);
+  font-size: 19px;
+  text-transform: uppercase;
+  box-shadow: 4px 4px 0 rgb(0 0 0 / 50%);
+}
+
+:where(.game) .gate-prompt {
+  font-family: var(--font-display);
+  font-size: clamp(24px, 4vmin, 40px);
+  text-transform: uppercase;
+  -webkit-text-stroke: 5px var(--stroke);
+  paint-order: stroke fill;
+}
+
+:where(.game) .gate[data-fit='ok'] .gate-prompt {
+  color: var(--ball);
+}
+
+:where(.game) .gate[data-fit='close'] .gate-prompt,
+:where(.game) .gate[data-fit='none'] .gate-prompt {
+  color: #ff7a57;
+}
+
+:where(.game) .gate-note {
+  color: #d9ccb6;
+  font-size: 14px;
+}
+
+/* Your face on your dog's head (FaceCutout): the soft-edged face fills the head circle
+   (--hx, --hy, --hr as shares of the sprite), and the dog's ears, nose, tongue and whiskers sit
+   over it, in the sprite's own pixel grid. */
+:where(.game) .dog-face {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+:where(.game) .dog-face-video {
+  --scale: 1.36;
+
+  position: absolute;
+  left: calc((var(--hx) - var(--hr) * var(--scale)) * 100%);
+  top: calc((var(--hy) - var(--hr) * var(--scale)) * 100%);
+  width: calc(var(--hr) * var(--scale) * 200%);
+  height: calc(var(--hr) * var(--scale) * 200%);
+}
+
+:where(.game) .dog-face-over {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+:where(.game) .fighter-lose .dog-face-video {
+  filter: grayscale(0.6);
+}
+
+/* Out of position mid-game: a warning over your dog. */
+:where(.game) .pos-warn {
+  position: absolute;
+  left: 26%;
+  bottom: calc(var(--ground) + var(--dog) + 12px);
+  z-index: 22;
+  margin: 0;
+  padding: 6px 14px;
+  border: 3px solid var(--stroke);
+  border-radius: 4px;
+  background: var(--p1);
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-size: clamp(18px, 3vmin, 28px);
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 4px 4px 0 rgb(0 0 0 / 50%);
+  translate: -50% 0;
+  animation:
+    combo-pop 200ms cubic-bezier(0.2, 1.6, 0.4, 1) both,
+    warn-blink 700ms steps(2) 200ms infinite;
+}
+
+:where(.game) .pos-warn-button {
+  cursor: var(--cursor-pointer);
+}
+
+@keyframes warn-blink {
+  50% {
+    background: #ffffff;
+    color: var(--p1);
+  }
+}
+
+:where(.game) .meter {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 15;
+  width: 26px;
+  height: clamp(120px, 22vh, 200px);
+  border: 3px solid var(--stroke);
+  border-radius: 4px;
+  background: #2a1d17;
+  overflow: hidden;
+  box-shadow: 4px 4px 0 rgb(0 0 0 / 50%);
+}
+
+:where(.game) .meter-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(0deg, var(--ball), #f7c948 60%, var(--p1));
+  background-size: 100% var(--meter-h, 160px);
+  background-position: bottom;
+  transition: height 60ms linear;
+}
+
+:where(.game) .meter-fill[data-hot='true'] {
+  box-shadow: 0 0 14px var(--p1);
+}
+
+:where(.game) .meter-label {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  writing-mode: vertical-rl;
+  font-family: var(--font-display);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  translate: -50% 0;
+  mix-blend-mode: difference;
+}
+
+/* ---------- Smash cards ---------- */
+
+:where(.game) .cards {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  z-index: 15;
+  display: flex;
+  gap: 20px;
+  translate: -50% 0;
+}
+
+:where(.game) .pcard {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 20px;
-  margin-top: 24px;
+  gap: 10px;
+  min-width: 220px;
+  padding: 6px 18px 6px 6px;
+  border: 3px solid var(--stroke);
+  border-radius: 6px;
+  background: linear-gradient(160deg, #ec6a43, var(--p1));
+  box-shadow: 6px 6px 0 rgb(0 0 0 / 50%);
+  transform: skewX(-8deg);
 }
 
-.tape-actions .button {
-  height: 48px;
-  min-width: 200px;
-  font-size: 19px;
+:where(.game) .pcard-them {
+  background: linear-gradient(160deg, var(--p2-light), var(--p2));
 }
 
-.duel-steps {
-  counter-reset: step;
+:where(.game) .pcard > * {
+  transform: skewX(8deg);
 }
 
-.duel-steps li {
-  position: relative;
-  padding: 10px 0 10px 36px;
-  border-top: 1px solid var(--rule);
-  counter-increment: step;
+:where(.game) .pcard .portrait {
+  border: 3px solid var(--stroke);
+  border-radius: 4px;
+  background-color: #f7f0e2;
 }
 
-.duel-steps li:first-child {
-  border-top: 0;
+:where(.game) .pcard-text {
+  display: grid;
+  line-height: 1;
 }
 
-.duel-steps li::before {
-  content: counter(step);
+:where(.game) .pcard-tag {
+  justify-self: start;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--stroke);
+  font-family: var(--font-display);
+  font-size: 13px;
+}
+
+:where(.game) .pcard-score {
+  font-family: var(--font-display);
+  font-size: 40px;
+  line-height: 44px;
+  -webkit-text-stroke: 3px var(--stroke);
+  paint-order: stroke fill;
+}
+
+:where(.game) .pcard-name {
+  font-family: var(--font-display);
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ---------- tools ---------- */
+
+.game-tools {
   position: absolute;
-  top: 6px;
-  left: 0;
+  right: 16px;
+  bottom: 16px;
+  z-index: 15;
+  display: flex;
+  gap: 8px;
+}
+
+:where(.game) .tool {
+  height: 38px;
+  padding: 0 14px;
+  border: 3px solid var(--stroke);
+  border-radius: 4px;
+  background: #f7f0e2;
+  color: var(--stroke);
+  font-family: var(--font-display);
+  font-size: 15px;
+  text-transform: uppercase;
+  box-shadow: 4px 4px 0 rgb(0 0 0 / 50%);
+}
+
+:where(.game) .tool:hover {
+  background: var(--ball);
+}
+
+:where(.game) .tool-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  padding: 0;
+}
+
+:where(.game) .tool-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+/* The shell's sound toggle, reused: speaker filled, waves stroked. */
+:where(.game) .tool-icon svg path:first-child:not(:only-child) {
+  fill: currentcolor;
+  stroke: none;
+}
+
+:where(.game) .tool-gap {
+  display: none;
+}
+
+.game-error {
+  position: absolute;
+  top: 120px;
+  left: 50%;
+  z-index: 40;
+  max-width: min(560px, calc(100% - 32px));
+  padding: 8px 14px;
+  border: 3px solid var(--stroke);
+  border-radius: 4px;
+  background: var(--p1);
+  font-weight: 500;
+  translate: -50% 0;
+}
+
+/* ---------- announcer ---------- */
+
+:where(.game) .announcer {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 120px 16px 140px;
+  pointer-events: none;
+}
+
+:where(.game) .announce {
+  margin: 0;
+  text-align: center;
+}
+
+:where(.game) .slam {
+  font-family: var(--font-display);
+  line-height: 1;
+  text-transform: uppercase;
+  -webkit-text-stroke: 8px var(--stroke);
+  paint-order: stroke fill;
+  text-shadow: 12px 12px 0 var(--stroke);
+  animation: slam 420ms cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+:where(.game) .slam-number {
+  color: var(--ball);
+  font-size: clamp(140px, 30vmin, 300px);
+  rotate: -4deg;
+}
+
+:where(.game) .slam-bark {
+  color: var(--p1);
+  font-size: clamp(110px, 24vmin, 260px);
+  rotate: -6deg;
+  animation:
+    slam 300ms cubic-bezier(0.2, 1.6, 0.4, 1) both,
+    bark-shake 120ms steps(2) 300ms infinite;
+}
+
+@keyframes slam {
+  from {
+    opacity: 0;
+    scale: 3;
+  }
+}
+
+@keyframes bark-shake {
+  50% {
+    translate: 5px -4px;
+  }
+}
+
+:where(.game) .ready {
+  font-family: var(--font-display);
+  font-size: clamp(56px, 11vmin, 120px);
+  text-transform: uppercase;
+  -webkit-text-stroke: 6px var(--stroke);
+  paint-order: stroke fill;
+  animation: pulse 500ms ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+  to {
+    scale: 1.08;
+    color: var(--ball);
+  }
+}
+
+:where(.game) .judging {
+  font-family: var(--font-display);
+  font-size: clamp(40px, 7vmin, 72px);
+  text-transform: uppercase;
+  -webkit-text-stroke: 5px var(--stroke);
+  paint-order: stroke fill;
+}
+
+:where(.game) .dots::after {
+  content: '';
+  animation: dots 900ms steps(4) infinite;
+}
+
+@keyframes dots {
+  0% {
+    content: '';
+  }
+
+  25% {
+    content: '.';
+  }
+
+  50% {
+    content: '..';
+  }
+
+  75% {
+    content: '...';
+  }
+}
+
+/* VS intro: name plates slam in from the sides. */
+:where(.game) .announce-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 2vw;
+  width: min(1100px, 100%);
+}
+
+:where(.game) .intro-plate {
+  display: grid;
+  padding: 14px 28px;
+  border: 4px solid var(--stroke);
+  background: var(--p1);
+  box-shadow: 8px 8px 0 rgb(0 0 0 / 50%);
+  transform: skewX(-12deg);
+  animation: plate-left 450ms cubic-bezier(0.2, 1.3, 0.4, 1) both;
+}
+
+:where(.game) .intro-plate-them {
+  background: var(--p2);
+  animation-name: plate-right;
+  animation-delay: 150ms;
+}
+
+:where(.game) .intro-name {
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: clamp(28px, 5vmin, 56px);
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+:where(.game) .intro-dog {
+  font-family: var(--mono);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+:where(.game) .intro-vs {
+  display: grid;
+  place-items: center;
+  width: clamp(90px, 16vmin, 150px);
+  height: clamp(90px, 16vmin, 150px);
+  border: 6px solid var(--stroke);
+  border-radius: 50%;
+  background: var(--ball);
+  color: var(--stroke);
+  font-family: var(--font-display);
+  font-size: clamp(40px, 7vmin, 72px);
+  rotate: -10deg;
+  animation: slam 380ms cubic-bezier(0.2, 1.6, 0.4, 1) 500ms both;
+}
+
+:where(.game) .intro-round {
+  grid-column: 1 / -1;
+  justify-self: center;
+  padding: 4px 12px;
+  border-radius: 3px;
+  background: rgb(18 14 12 / 85%);
+  font-family: var(--mono);
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  animation: fade-up 400ms ease-out 900ms both;
+}
+
+@keyframes plate-left {
+  from {
+    translate: -120vw 0;
+  }
+}
+
+@keyframes plate-right {
+  from {
+    translate: 120vw 0;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    translate: 0 16px;
+  }
+}
+
+/* Round result: a banner once the finishing bark has landed. */
+:where(.game) .announce-result {
+  padding: 18px 32px 16px;
+  border: 4px solid var(--ball);
+  border-radius: 6px;
+  background: rgb(18 14 12 / 88%);
+  box-shadow: 8px 8px 0 rgb(0 0 0 / 50%);
+  animation: fade-up 300ms ease-out 700ms both;
+}
+
+:where(.game) .result-call {
+  color: var(--ball);
+  font-family: var(--font-display);
+  font-size: clamp(32px, 6vmin, 64px);
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+:where(.game) .result-scores {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 6px;
+  font-family: var(--font-display);
+  font-size: clamp(26px, 4.5vmin, 44px);
+}
+
+:where(.game) .result-scores .won {
+  padding: 4px 12px 2px;
+  line-height: 1.15;
+  border-radius: 3px;
+  background: var(--ball);
+  color: var(--stroke);
+}
+
+:where(.game) .result-scores .vs {
+  color: #bcae99;
+  font-size: 0.55em;
+}
+
+:where(.game) .result-next {
+  margin-top: 6px;
+  color: #bcae99;
+  font-family: var(--mono);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* Match over: K.O. slams in and out, then the verdict. */
+:where(.game) .announce-over {
+  display: grid;
+  justify-items: center;
+}
+
+:where(.game) .ko {
+  grid-area: 1 / 1;
+  color: var(--p1);
+  font-family: var(--font-display);
+  font-size: clamp(140px, 30vmin, 320px);
+  line-height: 1;
+  -webkit-text-stroke: 8px var(--stroke);
+  paint-order: stroke fill;
+  text-shadow: 12px 12px 0 var(--stroke);
+  animation: ko 1.1s cubic-bezier(0.2, 1.6, 0.4, 1) 500ms both;
+}
+
+@keyframes ko {
+  0% {
+    opacity: 0;
+    scale: 3;
+  }
+
+  30% {
+    opacity: 1;
+    scale: 1;
+  }
+
+  80% {
+    opacity: 1;
+    scale: 1;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 0.6;
+  }
+}
+
+:where(.game) .final-call {
+  grid-area: 1 / 1;
+  align-self: center;
+  color: var(--ball);
+  font-family: var(--font-display);
+  font-size: clamp(80px, 17vmin, 200px);
+  line-height: 1;
+  text-transform: uppercase;
+  -webkit-text-stroke: 7px var(--stroke);
+  paint-order: stroke fill;
+  text-shadow: 10px 10px 0 var(--stroke);
+  rotate: -4deg;
+  animation: slam 420ms cubic-bezier(0.2, 1.6, 0.4, 1) 1.6s both;
+}
+
+:where(.game) .announce-opponent .final-call {
+  color: #bcae99;
+}
+
+:where(.game) .announce-draw .final-call {
+  color: #f7f0e2;
+}
+
+:where(.game) .final-note {
+  margin-top: 10px;
+  padding: 4px 12px;
+  border-radius: 3px;
+  background: rgb(18 14 12 / 85%);
+  font-family: var(--mono);
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  animation: fade-up 400ms ease-out 1.8s both;
+}
+
+:where(.game) .final-detail {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 12px;
+  font-family: var(--font-display);
+  font-size: 40px;
+  -webkit-text-stroke: 5px var(--stroke);
+  paint-order: stroke fill;
+  animation: fade-up 400ms ease-out 2s both;
+}
+
+:where(.game) .elo-chip {
+  padding: 2px 12px;
+  border: 3px solid var(--stroke);
+  border-radius: 4px;
+  background: #bcae99;
+  color: var(--stroke);
+  font-size: 26px;
+  -webkit-text-stroke: 0;
+}
+
+:where(.game) .elo-up {
+  background: var(--ball);
+}
+
+:where(.game) .confetti {
+  position: absolute;
+  inset: 0;
+  z-index: 18;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+:where(.game) .confetti span {
+  position: absolute;
+  top: -20px;
+  left: var(--x);
+  width: 10px;
+  height: 16px;
+  border: 2px solid var(--stroke);
+  animation: confetti 2.6s linear var(--delay) infinite backwards;
+}
+
+@keyframes confetti {
+  to {
+    translate: var(--drift) 110vh;
+    rotate: var(--spin);
+  }
+}
+
+/* ---------- menus ---------- */
+
+:where(.game) .menu {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  justify-items: center;
+  align-items: start;
+  padding: 120px 16px 16px;
+  overflow-y: auto;
+  background: radial-gradient(ellipse at 50% 40%, rgb(10 8 7 / 55%), transparent 70%);
+}
+
+:where(.game) .menu-panel {
+  display: grid;
+  gap: 12px;
+  width: min(440px, 100%);
+  padding: 24px;
+  border: 4px solid var(--stroke);
+  border-radius: 6px;
+  background: #f3ead9;
+  color: var(--stroke);
+  box-shadow: 10px 10px 0 rgb(0 0 0 / 50%);
+  animation: fade-up 300ms ease-out both;
+
+  --focus: var(--stroke);
+}
+
+:where(.game) .menu-title {
+  font-family: var(--font-display);
+  font-size: 36px;
+  line-height: 1.1;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+:where(.game) .menu-field {
+  display: grid;
+  gap: 6px;
+  font-weight: 500;
+}
+
+:where(.game) .menu-field input {
+  height: 42px;
+  padding: 0 12px;
+  border: 3px solid var(--stroke);
+  border-radius: 4px;
+  background: #ffffff;
+  color: var(--stroke);
+  font-size: 16px;
+}
+
+:where(.game) .menu-big {
+  display: grid;
+  gap: 2px;
+  padding: 14px;
+  border: 3px solid var(--stroke);
+  border-radius: 4px;
+  background: var(--stroke);
+  color: var(--ball);
+  box-shadow: 5px 5px 0 rgb(0 0 0 / 30%);
+  transition: transform 100ms ease;
+}
+
+:where(.game) .menu-big-title {
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+:where(.game) .menu-big-sub {
+  color: #d9ccb6;
+  font-size: 13px;
+}
+
+:where(.game) .menu-big:hover:not(:disabled) {
+  background: var(--p1);
+  color: #ffffff;
+  transform: translate(-2px, -2px);
+}
+
+:where(.game) .menu-label {
+  margin-top: 4px;
+  font-family: var(--mono);
+  font-size: 12px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+:where(.game) .menu-bots {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+:where(.game) .menu-bot {
+  display: grid;
+  gap: 2px;
+  padding: 10px 6px;
+  border: 3px solid var(--stroke);
+  border-radius: 4px;
+  background: #ffffff;
+  color: var(--stroke);
+  transition: transform 100ms ease;
+}
+
+:where(.game) .menu-bot-easy {
+  background: #ecfc8e;
+}
+
+:where(.game) .menu-bot-normal {
+  background: #f7c948;
+}
+
+:where(.game) .menu-bot-hard {
+  background: #ec6a43;
+}
+
+:where(.game) .menu-bot:hover:not(:disabled) {
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 var(--stroke);
+}
+
+:where(.game) .menu-bot-title {
   font-family: var(--font-display);
   font-size: 22px;
-  line-height: 28px;
+  text-transform: uppercase;
 }
 
-@media (max-width: 960px) {
-  .duel-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
+:where(.game) .menu-bot-sub {
+  font-size: 12px;
 }
 
-@media (max-width: 640px) {
-  .tape {
-    padding: var(--pad);
+:where(.game) .menu-big:disabled,
+:where(.game) .menu-bot:disabled {
+  opacity: 0.45;
+}
+
+:where(.game) .menu-note {
+  color: #62564a;
+  font-size: 13px;
+  text-align: center;
+}
+
+:where(.game) .queue-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  text-align: center;
+}
+
+:where(.game) .queue-stats div + div {
+  border-left: 2px solid #dccfb7;
+}
+
+:where(.game) .queue-stats dt {
+  color: #62564a;
+  font-size: 12px;
+}
+
+:where(.game) .queue-stats dd {
+  font-family: var(--font-display);
+  font-size: 32px;
+}
+
+:where(.game) .menu-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+:where(.game) .menu-small {
+  height: 42px;
+  padding: 0 16px;
+  border: 3px solid var(--stroke);
+  border-radius: 4px;
+  background: #f7f0e2;
+  color: var(--stroke);
+  font-family: var(--font-display);
+  font-size: 17px;
+  text-transform: uppercase;
+  box-shadow: 4px 4px 0 rgb(0 0 0 / 40%);
+}
+
+:where(.game) .menu-small:hover {
+  background: var(--ball);
+}
+
+:where(.game) .menu-primary {
+  background: var(--ball);
+}
+
+:where(.game) .menu-primary:hover {
+  background: var(--p1);
+  color: #ffffff;
+}
+
+:where(.game) .after {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--ground) - 24px);
+  z-index: 25;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  width: max-content;
+  max-width: calc(100% - 32px);
+  translate: -50% 0;
+  animation: fade-up 400ms ease-out 2.6s both;
+}
+
+/* ---------- smaller screens ---------- */
+
+@media (max-width: 900px) {
+  .game {
+    --dog: clamp(128px, 34vw, 260px);
+    --ground: 24vh;
   }
 
-  .tape-name {
-    font-size: 30px;
+  :where(.game) .cards {
+    display: none;
   }
 
-  .tape-vs {
-    width: 44px;
-    height: 44px;
+  :where(.game) .hud {
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  :where(.game) .hp-portrait .portrait,
+:where(.game) .portrait-empty {
+    width: 44px !important;
+    height: 44px !important;
+    background-size: 108px !important;
+  }
+
+  :where(.game) .hp-name-text {
     font-size: 18px;
+    line-height: 22px;
   }
 
-  .tape-row {
-    grid-template-columns: minmax(0, 1fr) 84px minmax(0, 1fr);
+  :where(.game) .hp-sub {
+    display: none;
   }
 
-  .tape-row dd {
-    font-size: 22px;
+  :where(.game) .hp-track {
+    height: 16px;
   }
 
-  .tape-actions .button {
-    width: 100%;
+  :where(.game) .hud-centre {
+    min-width: 64px;
+    padding: 4px 8px;
+  }
+
+  :where(.game) .hud-timer,
+:where(.game) .hud-vs {
+    font-size: 28px;
+    line-height: 32px;
+  }
+
+  :where(.game) .menu {
+    padding-top: 96px;
+  }
+}
+
+@media (max-width: 560px) {
+  :where(.game) .hp-portrait {
+    display: none;
+  }
+
+  .game-tools .tool:not(.tool-icon) {
+    padding: 0 10px;
+  }
+
+  :where(.game) .menu-panel {
+    padding: 18px;
+  }
+
+  :where(.game) .menu-bots {
+    grid-template-columns: 1fr;
+  }
+
+  :where(.game) .announce-intro {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  :where(.game) .intro-vs {
+    grid-row: 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game *,
+.game *::before,
+.game *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+/* ---------- attacks: fireballs, beams, hit sparks ---------- */
+
+/* A bark fireball: hot core, coloured edge, two fading afterimages behind it. */
+:where(.game) .ball {
+  --size: calc(var(--dog) * 0.3);
+  --glow: var(--ball);
+  --edge: var(--p1);
+
+  position: absolute;
+  bottom: calc(var(--ground) + var(--dog) * 0.36);
+  width: var(--size);
+  height: calc(var(--size) * 0.78);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 66% 50%, #ffffff 0 20%, var(--glow) 38%, var(--edge) 64%, transparent 70%);
+  filter: drop-shadow(0 0 calc(var(--size) * 0.18) var(--glow));
+  pointer-events: none;
+  animation:
+    ball-right 380ms linear forwards,
+    ball-pulse 90ms steps(2) infinite;
+}
+
+:where(.game) .ball::before,
+:where(.game) .ball::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: inherit;
+}
+
+:where(.game) .ball::before {
+  opacity: 0.45;
+  translate: -45% 0;
+  scale: 0.8;
+}
+
+:where(.game) .ball::after {
+  opacity: 0.2;
+  translate: -90% 0;
+  scale: 0.6;
+}
+
+:where(.game) .ball-from-them {
+  --glow: var(--p2-light);
+  --edge: var(--p2);
+
+  transform: scaleX(-1);
+  animation-name: ball-left, ball-pulse;
+}
+
+@keyframes ball-right {
+  from {
+    left: calc(26% + var(--dog) * 0.28);
+  }
+
+  to {
+    left: calc(74% - var(--dog) * 0.45);
+  }
+}
+
+@keyframes ball-left {
+  from {
+    left: calc(74% - var(--dog) * 0.58);
+  }
+
+  to {
+    left: calc(26% - var(--dog) * 0.15);
+  }
+}
+
+@keyframes ball-pulse {
+  50% {
+    scale: 1.08 0.92;
+  }
+}
+
+/* The super's beam: shoots across from the attacker, then pinches out. */
+:where(.game) .beam {
+  --glow: var(--ball);
+  --edge: var(--p1);
+
+  position: absolute;
+  bottom: calc(var(--ground) + var(--dog) * 0.28);
+  left: calc(26% + var(--dog) * 0.3);
+  right: calc(26% - var(--dog) * 0.1);
+  height: calc(var(--dog) * 0.34);
+  border-radius: 999px;
+  background: linear-gradient(transparent, var(--edge) 12%, var(--glow) 30%, #ffffff 42% 58%, var(--glow) 70%, var(--edge) 88%, transparent);
+  filter: drop-shadow(0 0 24px var(--glow));
+  transform-origin: 0 50%;
+  pointer-events: none;
+  animation: beam 520ms ease-out forwards;
+}
+
+:where(.game) .beam-from-them {
+  --glow: var(--p2-light);
+  --edge: var(--p2);
+
+  left: calc(26% - var(--dog) * 0.1);
+  right: calc(26% + var(--dog) * 0.3);
+  transform-origin: 100% 50%;
+}
+
+@keyframes beam {
+  0% {
+    transform: scaleX(0);
+  }
+
+  35% {
+    transform: scaleX(1);
+  }
+
+  70% {
+    transform: scaleX(1) scaleY(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scaleX(1) scaleY(0);
+    opacity: 0;
+  }
+}
+
+/* Hit spark: white-hot shards and a ring from the point of impact. */
+:where(.game) .hitspark {
+  position: absolute;
+  bottom: calc(var(--ground) + var(--dog) * 0.45);
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+:where(.game) .hitspark-on-them {
+  left: calc(74% - var(--dog) * 0.18);
+}
+
+:where(.game) .hitspark-on-you {
+  left: calc(26% + var(--dog) * 0.18);
+}
+
+:where(.game) .hitspark-clash {
+  left: 50%;
+}
+
+:where(.game) .hitspark::before {
+  content: '';
+  position: absolute;
+  width: calc(var(--dog) * 0.3);
+  height: calc(var(--dog) * 0.3);
+  border: 4px solid #ffffff;
+  border-radius: 50%;
+  translate: -50% -50%;
+  animation: ring 300ms ease-out forwards;
+}
+
+:where(.game) .hitspark i {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(var(--dog) * 0.34);
+  height: calc(var(--dog) * 0.035);
+  border-radius: 0 50% 50% 0;
+  background: linear-gradient(90deg, #ffffff 45%, var(--ball));
+  transform-origin: 0 50%;
+  translate: 0 -50%;
+  animation: shard 260ms ease-out forwards;
+}
+
+:where(.game) .hitspark-big i {
+  width: calc(var(--dog) * 0.62);
+  height: calc(var(--dog) * 0.06);
+  background: linear-gradient(90deg, #ffffff 40%, #f7c948 70%, var(--p1));
+  animation-duration: 420ms;
+}
+
+:where(.game) .hitspark-big::before {
+  width: calc(var(--dog) * 0.6);
+  height: calc(var(--dog) * 0.6);
+  border-width: 8px;
+  animation-duration: 480ms;
+}
+
+:where(.game) .hitspark-clash i {
+  background: linear-gradient(90deg, #ffffff 40%, var(--p2-light) 70%, var(--ball));
+}
+
+@keyframes shard {
+  0% {
+    scale: 0.15 1;
+    opacity: 1;
+  }
+
+  45% {
+    scale: 1 1;
+  }
+
+  100% {
+    scale: 1.2 0;
+    opacity: 0;
+  }
+}
+
+@keyframes ring {
+  from {
+    scale: 0.2;
+    opacity: 1;
+  }
+
+  to {
+    scale: 1.5;
+    opacity: 0;
+  }
+}
+
+/* Hit-stop: everything on stage holds for a few frames when a hit lands. */
+:where(.game) .stage.hitstop *,
+:where(.game) .stage.hitstop *::before,
+:where(.game) .stage.hitstop *::after {
+  animation-play-state: paused !important;
+}
+
+/* Combo counter, under the attacker's bar. */
+:where(.game) .combo {
+  position: absolute;
+  top: 120px;
+  margin: 0;
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-size: clamp(22px, 3.6vmin, 40px);
+  line-height: 1;
+  text-transform: uppercase;
+  -webkit-text-stroke: 4px var(--stroke);
+  paint-order: stroke fill;
+  transform: skewX(-12deg);
+  animation: combo-pop 220ms cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+:where(.game) .combo span {
+  color: var(--ball);
+  font-size: 1.7em;
+}
+
+:where(.game) .combo-you {
+  left: 3%;
+}
+
+.game[data-scene='over'] .combo {
+  display: none;
+}
+
+:where(.game) .combo-them {
+  right: 3%;
+}
+
+:where(.game) .combo-them span {
+  color: var(--p2-light);
+}
+
+@keyframes combo-pop {
+  from {
+    scale: 1.6;
+    opacity: 0;
+  }
+}
+
+/* Super: dim and freeze, with the attacker's portrait cutting across on a band of speed lines. */
+:where(.game) .super {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  background: radial-gradient(ellipse at 50% 50%, rgb(0 0 0 / 30%), rgb(0 0 0 / 82%));
+  pointer-events: none;
+  animation: fade-up 120ms ease-out both;
+}
+
+:where(.game) .super-band {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  height: 220px;
+  overflow: hidden;
+  border-block: 5px solid #ffffff;
+  background:
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 30%) 0 3px, transparent 3px 46px),
+    linear-gradient(90deg, #7c1d08, var(--p1) 30% 70%, #7c1d08);
+  translate: 0 -50%;
+  animation:
+    band 650ms cubic-bezier(0.2, 0.9, 0.3, 1) both,
+    speed 160ms linear infinite;
+}
+
+:where(.game) .super-them .super-band {
+  background:
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 30%) 0 3px, transparent 3px 46px),
+    linear-gradient(90deg, #123d7a, var(--p2) 30% 70%, #123d7a);
+}
+
+:where(.game) .super-band .portrait {
+  align-self: center;
+  border: 5px solid var(--stroke);
+  background-color: #f7f0e2;
+  box-shadow: 8px 8px 0 rgb(0 0 0 / 50%);
+  animation: cutin 650ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+:where(.game) .super-them .super-band .portrait {
+  animation-name: cutin-them;
+}
+
+@keyframes band {
+  0% {
+    clip-path: inset(50% 0);
+  }
+
+  20%,
+  85% {
+    clip-path: inset(0 0);
+  }
+
+  100% {
+    clip-path: inset(50% 0);
+  }
+}
+
+@keyframes speed {
+  to {
+    background-position: -46px 0, 0 0;
+  }
+}
+
+@keyframes cutin {
+  0% {
+    translate: -70vw 0;
+  }
+
+  30%,
+  80% {
+    translate: 0 0;
+  }
+
+  100% {
+    translate: 70vw 0;
+  }
+}
+
+@keyframes cutin-them {
+  0% {
+    translate: 70vw 0;
+  }
+
+  30%,
+  80% {
+    translate: 0 0;
+  }
+
+  100% {
+    translate: -70vw 0;
+  }
+}
+
+/* ---------- stage roulette ---------- */
+
+:where(.game) .roulette {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  width: min(1100px, 100%);
+}
+
+:where(.game) .roulette-title {
+  font-family: var(--font-display);
+  font-size: clamp(36px, 6vmin, 64px);
+  line-height: 1;
+  text-transform: uppercase;
+  -webkit-text-stroke: 6px var(--stroke);
+  paint-order: stroke fill;
+  text-shadow: 6px 6px 0 var(--stroke);
+}
+
+:where(.game) .roulette-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  width: 100%;
+}
+
+:where(.game) .roulette-card {
+  border: 4px solid var(--stroke);
+  border-radius: 4px;
+  background: var(--stroke);
+  box-shadow: 6px 6px 0 rgb(0 0 0 / 50%);
+  filter: brightness(0.5) saturate(0.5);
+}
+
+:where(.game) .roulette-thumb {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+}
+
+:where(.game) .roulette-name {
+  display: block;
+  padding: 6px 4px;
+  font-family: var(--font-display);
+  font-size: clamp(14px, 2.2vmin, 22px);
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+:where(.game) .roulette-on {
+  border-color: var(--ball);
+  filter: none;
+  transform: translateY(-8px) scale(1.06);
+  box-shadow:
+    0 0 0 3px var(--ball),
+    0 0 30px rgb(216 242 60 / 60%),
+    6px 6px 0 rgb(0 0 0 / 50%);
+}
+
+:where(.game) .roulette-on .roulette-name {
+  background: var(--ball);
+  color: var(--stroke);
+}
+
+:where(.game) .roulette-pick {
+  animation: pick 600ms cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+@keyframes pick {
+  35% {
+    scale: 1.25;
+  }
+}
+
+/* ---------- opponent search: a walk down the block ---------- */
+
+:where(.game) .search {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  overflow: hidden;
+}
+
+.game[data-scene='queue'] .cards,
+.game[data-scene='joining'] .cards {
+  display: none;
+}
+
+:where(.game) .search-sky {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(#5fb4ea, #bfe6fb 70%);
+}
+
+:where(.game) .search-far {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 30%;
+  height: 48%;
+  overflow: hidden;
+  container-type: size;
+}
+
+:where(.game) .search-strip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 200%;
+  animation: scroll-half 30s linear infinite;
+}
+
+:where(.game) .search-strip .skyline {
+  bottom: 0;
+  height: 100%;
+}
+
+@keyframes scroll-half {
+  to {
+    translate: -50% 0;
+  }
+}
+
+/* Lamp posts every 380px, passing faster than the buildings. */
+:where(.game) .search-lamps {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 30%;
+  height: 36%;
+  background:
+    linear-gradient(90deg, #fff3c4 0 54px, transparent 54px) -22px 0 / 380px 18px repeat-x,
+    linear-gradient(90deg, #2f3a40 0 10px, transparent 10px) 0 100% / 380px calc(100% - 14px) repeat-x;
+  animation: lamps 3.4s linear infinite;
+}
+
+@keyframes lamps {
+  to {
+    background-position:
+      -402px 0,
+      -380px 100%;
+  }
+}
+
+:where(.game) .search-curb {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 28%;
+  height: 2%;
+  border-top: 3px solid #2b2430;
+  background: linear-gradient(#e7e1d6, #a39b8d);
+}
+
+:where(.game) .search-walk {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 28%;
+  background:
+    repeating-linear-gradient(90deg, rgb(60 52 44 / 45%) 0 3px, transparent 3px 150px),
+    linear-gradient(#cfc8bb, #a69e90);
+  animation: slabs 1.1s linear infinite;
+}
+
+@keyframes slabs {
+  to {
+    background-position:
+      -150px 0,
+      0 0;
+  }
+}
+
+:where(.game) .search-dog {
+  position: absolute;
+  left: 14%;
+  bottom: calc(28% - 1.6%);
+}
+
+/* The face rides the walk's bob with the sprite. */
+:where(.game) .search-dog .dog-face {
+  animation: dog-walk-bob 360ms steps(1) infinite;
+}
+
+:where(.game) .search-panel {
+  position: absolute;
+  top: 46%;
+  right: 6%;
+  display: grid;
+  gap: 14px;
+  width: min(420px, calc(100% - 32px));
+  padding: 22px;
+  border: 4px solid var(--stroke);
+  border-radius: 6px;
+  background: #f3ead9;
+  color: var(--stroke);
+  box-shadow: 10px 10px 0 rgb(0 0 0 / 40%);
+  translate: 0 -50%;
+}
+
+:where(.game) .search-title {
+  font-family: var(--font-display);
+  font-size: 32px;
+  line-height: 1.1;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+:where(.game) .search-note {
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  /* One card at a time on a narrow screen: the lit one, centred. */
+  :where(.game) .roulette-strip {
+    grid-template-columns: minmax(0, 1fr);
+    width: min(280px, 80%);
+  }
+
+  :where(.game) .roulette-card:not(.roulette-on) {
+    display: none;
+  }
+
+  :where(.game) .search-panel {
+    top: 92px;
+    left: 50%;
+    right: auto;
+    translate: -50% 0;
+  }
+
+  :where(.game) .search-dog {
+    left: 50%;
+    translate: -50% 0;
+  }
+
+  :where(.game) .super-band {
+    height: 140px;
+  }
+
+  :where(.game) .super-band .portrait {
+    scale: 0.62;
   }
 }

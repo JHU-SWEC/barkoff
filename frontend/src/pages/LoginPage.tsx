@@ -1,5 +1,7 @@
 import { Link } from 'react-router'
+import { DogSprite } from '../components/DogSprite'
 import { StubNote } from '../components/StubNote'
+import { dogById } from '../dogs'
 import './LoginPage.css'
 
 export default function LoginPage() {
@@ -7,6 +9,12 @@ export default function LoginPage() {
     <main className="login">
       <title>Sign in · Bark Off</title>
       <div className="login-poster on-ink">
+        {/* The pack, mid-bark. */}
+        <div className="login-pack" aria-hidden="true">
+          {['corgi', 'husky', 'pug', 'beagle'].map((id, i) => (
+            <DogSprite key={id} dog={dogById(id)} scale={2} barking={i % 2 === 0} flip={i % 2 === 1} />
+          ))}
+        </div>
         <p className="login-wordmark">
           Bark
           <br />
