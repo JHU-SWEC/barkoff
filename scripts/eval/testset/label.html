@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bark Labeller</title>
+<!--
+  Hand-label the likeness test set. Open this file straight from disk after
+  running build_testset.py (it reads audio/clips.js and audio/*.wav).
+  Labelling is blind: you only see clip ids, never the source or category.
+  Progress autosaves in this browser; "Download CSV" saves labels/<name>.csv.
+-->
+<style>
+  :root {
+    --bg: #f7f7f5; --card: #ffffff; --text: #1c1c1a; --muted: #6b6b66;
+    --line: #e2e2dc; --accent: #2f5bd3; --accent-soft: #e8eefc; --done: #2e7d4f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #171716; --card: #222220; --text: #ecebe6; --muted: #a09f98;
+      --line: #3a3a36; --accent: #7d9bf0; --accent-soft: #2a3352; --done: #6cc28f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  label.small { color: var(--muted); font-size: 13px; }
+  input[type=text] { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px;
+                     background: var(--bg); color: var(--text); }
+  button { font: inherit; padding: 7px 12px; border-radius: 6px; border: 1px solid var(--line);
+           background: var(--card); color: var(--text); cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.pick { min-width: 56px; }
+  button.pick.on { background: var(--accent-soft); border-color: var(--accent); }
+  .clip-id { font-size: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  audio { width: 100%; margin: 12px 0; }
+  input[type=range] { flex: 1; min-width: 0; }
+  .score { font-size: 20px; font-variant-numeric: tabular-nums; min-width: 3ch; }
+  .anchors { margin: 8px 0 0; padding: 0; list-style: none; color: var(--muted); font-size: 13px; }
+  .anchors b { color: var(--text); font-variant-numeric: tabular-nums; }
+  .bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+  .bar > div { height: 100%; background: var(--done); width: 0; }
+  .grid { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 12px; }
+  .grid button { padding: 2px 0; width: 44px; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .grid button.labelled { border-color: var(--done); color: var(--done); }
+  .grid button.current { background: var(--accent-soft); border-color: var(--accent); }
+  .err { color: #c0392b; }
+  kbd { font: 12px ui-monospace, monospace; border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Bark Labeller</h1>
+  <p class="sub">Score each clip 0 to 1 by how much it sounds like a dog bark. Trust your ear, not the source.</p>
+
+  <div class="card row">
+    <label class="small" for="rater">Your name</label>
+    <input id="rater" type="text" placeholder="e.g. arnav" autocomplete="off">
+    <span style="flex:1"></span>
+    <button id="download" class="primary">Download CSV</button>
+    <label class="small"><input id="import" type="file" accept=".csv" hidden><button id="importBtn" type="button">Resume from CSV</button></label>
+  </div>
+
+  <div id="missing" class="card err" hidden>
+    No clips found. Run <code>python scripts/eval/testset/build_testset.py</code> first, then reload this page.
+  </div>
+
+  <div id="labeller" class="card" hidden>
+    <div class="row">
+      <span class="clip-id" id="clipId">c001</span>
+      <span class="small" id="pos"></span>
+      <span style="flex:1"></span>
+      <button id="prev">← Prev</button>
+      <button id="next">Next →</button>
+    </div>
+    <audio id="player" controls preload="auto"></audio>
+
+    <div class="row">
+      <input id="slider" type="range" min="0" max="1" step="0.05" value="0.5" aria-label="Bark score">
+      <span class="score" id="scoreOut">–</span>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="pick" data-v="0">0</button>
+      <button class="pick" data-v="0.25">0.25</button>
+      <button class="pick" data-v="0.5">0.5</button>
+      <button class="pick" data-v="0.75">0.75</button>
+      <button class="pick" data-v="1">1</button>
+      <button id="clear" style="margin-left:auto">Clear</button>
+    </div>
+    <ul class="anchors">
+      <li><b>1.0</b> unmistakably a dog barking</li>
+      <li><b>0.75</b> a convincing bark (a great impression, or a bark through noise)</li>
+      <li><b>0.5</b> could pass for a bark if you weren't paying attention</li>
+      <li><b>0.25</b> short or punchy, a little bark-ish, but clearly something else</li>
+      <li><b>0</b> nothing like a bark</li>
+    </ul>
+    <div class="row" style="margin-top:12px">
+      <label class="small" for="notes">Notes</label>
+      <input id="notes" type="text" style="flex:1" placeholder="optional, e.g. 'two dogs', 'clipped', 'mostly silence'">
+    </div>
+    <p class="small" style="margin:12px 0 0">
+      <kbd>Space</kbd> play/pause · <kbd>0</kbd>–<kbd>4</kbd> score 0/.25/.5/.75/1 · <kbd>←</kbd><kbd>→</kbd> prev/next.
+      Scoring with a number key jumps to the next clip.
+    </p>
+  </div>
+
+  <div id="progress" class="card" hidden>
+    <div class="row"><span id="countOut"></span></div>
+    <div class="bar"><div id="barFill"></div></div>
+    <div class="grid" id="grid"></div>
+  </div>
+</main>
+
+<script src="audio/clips.js"></script>
+<script>
+(() => {
+  const allClips = Array.isArray(window.CLIPS) ? window.CLIPS : [];
+  const $ = (id) => document.getElementById(id);
+  if (!allClips.length) { $("missing").hidden = false; return; }
+  $("labeller").hidden = false; $("progress").hidden = false;
+
+  const KEY = "barkoff.labels.v1";
+  // labels: { rater, scores: {id: number}, notes: {id: string}, at: index, order: [ids] }
+  let state = { rater: "", scores: {}, notes: {}, at: 0, order: [] };
+  try { state = Object.assign(state, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+
+  // Each person hears the clips in their own random order, so clips added
+  // later (e.g. a batch of barks at the end of the list) don't stand out.
+  // Clips new since last time are shuffled into the part not yet reached.
+  const known = state.order.filter((id) => allClips.includes(id));
+  const fresh = allClips.filter((id) => !known.includes(id));
+  for (let i = fresh.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [fresh[i], fresh[j]] = [fresh[j], fresh[i]];
+  }
+  const done = known.slice(0, state.at), rest = known.slice(state.at).concat(fresh);
+  for (let i = rest.length - 1; i > 0 && fresh.length; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [rest[i], rest[j]] = [rest[j], rest[i]];
+  }
+  const clips = done.concat(rest);
+  state.order = clips; save();
+
+  const player = $("player"), slider = $("slider");
+  $("rater").value = state.rater || "";
+  $("rater").addEventListener("input", (e) => { state.rater = e.target.value.trim(); save(); });
+
+  // Grid of all clips, to jump around and see what's done.
+  const grid = $("grid");
+  clips.forEach((id, i) => {
+    const b = document.createElement("button");
+    b.textContent = id; b.addEventListener("click", () => show(i));
+    grid.appendChild(b);
+  });
+
+  function show(i) {
+    state.at = Math.max(0, Math.min(clips.length - 1, i)); save();
+    const id = clips[state.at];
+    $("clipId").textContent = id;
+    $("pos").textContent = `${state.at + 1} of ${clips.length}`;
+    player.src = `audio/${id}.wav`;
+    player.play().catch(() => {});
+    const s = state.scores[id];
+    slider.value = s ?? 0.5;
+    $("scoreOut").textContent = s == null ? "–" : s.toFixed(2);
+    $("notes").value = state.notes[id] || "";
+    document.querySelectorAll(".pick").forEach((b) => b.classList.toggle("on", s != null && +b.dataset.v === s));
+    refresh();
+  }
+
+  function setScore(v, advance) {
+    const id = clips[state.at];
+    state.scores[id] = Math.round(v * 100) / 100; save();
+    show(advance ? state.at + 1 : state.at);
+  }
+
+  function refresh() {
+    const n = clips.filter((id) => state.scores[id] != null).length;
+    $("countOut").textContent = `${n} of ${clips.length} labelled`;
+    $("barFill").style.width = `${(100 * n) / clips.length}%`;
+    [...grid.children].forEach((b, i) => {
+      b.classList.toggle("labelled", state.scores[clips[i]] != null);
+      b.classList.toggle("current", i === state.at);
+    });
+  }
+
+  slider.addEventListener("input", () => { $("scoreOut").textContent = (+slider.value).toFixed(2); });
+  slider.addEventListener("change", () => setScore(+slider.value, false));
+  document.querySelectorAll(".pick").forEach((b) => b.addEventListener("click", () => setScore(+b.dataset.v, true)));
+  $("clear").addEventListener("click", () => { delete state.scores[clips[state.at]]; save(); show(state.at); });
+  $("notes").addEventListener("input", (e) => { state.notes[clips[state.at]] = e.target.value; save(); });
+  $("prev").addEventListener("click", () => show(state.at - 1));
+  $("next").addEventListener("click", () => show(state.at + 1));
+
+  document.addEventListener("keydown", (e) => {
+    if (e.target.tagName === "INPUT" && e.target.type === "text") return;
+    if (e.key === " ") { e.preventDefault(); player.paused ? player.play() : player.pause(); }
+    else if (e.key >= "0" && e.key <= "4") setScore(+e.key / 4, true);
+    else if (e.key === "ArrowRight") show(state.at + 1);
+    else if (e.key === "ArrowLeft") show(state.at - 1);
+  });
+
+  const csvCell = (s) => /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  $("download").addEventListener("click", () => {
+    const rater = (state.rater || "").toLowerCase().replace(/[^a-z0-9_-]/g, "") || "rater";
+    const lines = ["id,score,notes"];
+    allClips.forEach((id) => {
+      if (state.scores[id] != null) lines.push([id, state.scores[id], csvCell(state.notes[id] || "")].join(","));
+    });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([lines.join("\n") + "\n"], { type: "text/csv" }));
+    a.download = `${rater}.csv`;
+    a.click();
+  });
+
+  // Resume: load a CSV saved earlier (e.g. on another computer).
+  $("importBtn").addEventListener("click", () => $("import").click());
+  $("import").addEventListener("change", async (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const rows = (await file.text()).split(/\r?\n/).slice(1).filter(Boolean);
+    rows.forEach((line) => {
+      const m = line.match(/^([^,]+),([^,]*),?(.*)$/); if (!m) return;
+      const v = parseFloat(m[2]); if (!isNaN(v)) state.scores[m[1]] = v;
+      if (m[3]) state.notes[m[1]] = m[3].replace(/^"|"$/g, "").replace(/""/g, '"');
+    });
+    if (!state.rater) { state.rater = file.name.replace(/\.csv$/, ""); $("rater").value = state.rater; }
+    save(); show(state.at);
+  });
+
+  show(state.at || 0);
+})();
+</script>
+</body>
+</html>
