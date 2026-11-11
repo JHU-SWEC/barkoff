@@ -20,18 +20,18 @@ flowchart TD
   Profile -->|Recalibrate| Solo
 ```
 
-One part of this isn't wired yet: nothing sends you to Login, so the site opens on Home. A scored Solo take links to `/results?mode=solo`.
+The site opens on Home. Sign in lives in the top bar and on Profile. A scored Solo take links to `/results?mode=solo`.
 
 ## Pages
 
 | Route | Page | Status | What's real today | What it's waiting on |
 | --- | --- | --- | --- | --- |
-| `/login` | Login | Stub | Continue as guest | Auth provider; email, Google and Apple sign-in |
-| `/` | Home | Partly real | Mode cards, Mic check, best solo bark | Accounts for Your record; leaderboard API for Top dogs |
+| `/login` | Login | Partly real | Create an account or sign in with email and password; continue as guest | Google and Apple sign-in |
+| `/` | Home | Partly real | Mode cards, Mic check, best solo bark, Elo when signed in | Leaderboard API for Top dogs |
 | `/solo` | Single player | **Real** | The whole recorder: record, countdown, calibration, camera check, scoring; saves the result and personal best in this browser, then links to Results | Saving the personal best to an account |
 | `/duel` | Duel | Stub | Layout only, sample opponent | Matchmaking queue, realtime server, synced rounds |
 | `/results` | Results | Partly real | `?mode=solo`: the latest scored take, its breakdown and the personal best. Without it: sample duel | Duels for real rounds |
-| `/profile` | Profile | Partly real | Mic check, best solo bark | Accounts, Elo, match history, clip replay |
+| `/profile` | Profile | Partly real | Mic check, best solo bark, display name when signed in | Saving Elo from real duels, match history, clip replay |
 | `/leaderboard` | Leaderboard | Stub | Layout only, sample players | Leaderboard API |
 
 Anything else redirects to Home. Sample content lives in `src/sampleData.ts`, and every stub says so on the page. As a real API lands, delete its export and the compiler will point at each place to replace.
@@ -40,7 +40,7 @@ Anything else redirects to Home. Sample content lives in `src/sampleData.ts`, an
 
 1. ~~**Solo to Results.**~~ Done: scored takes are saved in `src/soloResults.ts` (localStorage) and shown on Results. Takes' audio still doesn't survive navigation.
 2. **Mic check gate.** Send first-time players to calibration before their first bark.
-3. **Accounts.** Login, then the real Home and Profile numbers.
+3. ~~**Accounts.**~~ Email, password and display name are in Postgres. Elo stays at the starting 1000 until duels exist, and solo barks are still saved in this browser.
 4. **Duel.** Queue, match found, synced rounds, then Results and Elo.
 5. **Leaderboard.** Comes almost free once duels record Elo.
 

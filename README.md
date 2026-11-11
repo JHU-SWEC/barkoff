@@ -69,7 +69,7 @@ One app server runs the game; scoring is its own service.
 
 ## Current milestone
 
-A website running locally that can record a bark in the browser, then run it through the scorer from the command line to get back a loudness number, a bark probability, and a combined score. Login, accounts, queues and server integration come later.
+A website running locally that can record a bark in the browser and score it (loudness, bark probability, combined score). Email accounts are stored in local Postgres: sign in on `/login`, edit the display name on `/profile`. Google and Apple sign-in, the duel queue and saving barks onto the account come later.
 
 - `frontend/`: Vite + React app. The recorder is the Single player page (record, playback, download, live level meter); the other pages are stubs, planned in [frontend/PAGES.md](frontend/PAGES.md)
 - Scorer: `score.py bark.webm`, which decodes with FFmpeg and prints loudness, likeness and the final score
@@ -85,6 +85,20 @@ npm run dev
 ```
 
 Open the printed localhost URL, choose **Solo** (or go straight to `/solo`), allow microphone access, and press **Record**. Auto-gain, noise suppression and echo cancellation are turned off so the scorer gets the raw signal; the "Microphone" panel shows what the browser actually applied. Chrome and Firefox record `.webm` (Opus); Safari records `.m4a` (AAC).
+
+## Accounts
+
+Players sign in through the API. The browser never connects to Postgres; DBeaver is only for looking at rows while developing.
+
+```sh
+docker compose up -d
+cd backend && source .venv/bin/activate
+pip install -r requirements.txt
+export DATABASE_URL=postgresql://barkoff:barkoff@localhost:5432/barkoff
+python server.py
+```
+
+`POST /api/register`, `POST /api/login` and `PATCH /api/me` write `users`. The session cookie is HttpOnly. `solo_bests`, `calibrations`, `matches` and `rounds` are in the schema so the data model is visible; the API does not write them yet. The schema is applied the first time the Docker volume is created.
 
 - **Calibrate:** two seconds of silence, then read one line at a normal volume. The page measures room noise and your speaking voice in LUFS and keeps them in this browser; **Download JSON** saves `calibration.json` for the scorer. Each take then shows how far its loudest 400 ms rose above your voice.
 - **Countdown:** 3-2-1, a random pause, then **BARK!** Recording starts on the cue, like a duel round. Stop during the countdown cancels.

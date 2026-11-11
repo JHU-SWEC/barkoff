@@ -25,6 +25,7 @@ from urllib.parse import parse_qs, urlparse
 
 import numpy as np
 
+import accounts
 import likeness
 import score as scorer
 from loudness import Calibration
@@ -60,16 +61,39 @@ def parse_calibration(query: dict) -> Calibration | None:
 
 
 class Handler(BaseHTTPRequestHandler):
-    def _send_json(self, status: int, body: dict) -> None:
+    def _send_json(self, status: int, body: dict, headers: dict | None = None) -> None:
         data = json.dumps(body).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(data)))
+        for name, value in (headers or {}).items():
+            self.send_header(name, value)
         self.end_headers()
         self.wfile.write(data)
 
+    def do_GET(self) -> None:
+        if urlparse(self.path).path == "/api/me":
+            accounts.handle(self, "me")
+            return
+        self._send_json(404, {"error": "Not found"})
+
+    def do_PATCH(self) -> None:
+        if urlparse(self.path).path == "/api/me":
+            accounts.handle(self, "profile")
+            return
+        self._send_json(404, {"error": "Not found"})
+
     def do_POST(self) -> None:
         url = urlparse(self.path)
+        if url.path == "/api/register":
+            accounts.handle(self, "register")
+            return
+        if url.path == "/api/login":
+            accounts.handle(self, "login")
+            return
+        if url.path == "/api/logout":
+            accounts.handle(self, "logout")
+            return
         if url.path != "/api/score":
             self._send_json(404, {"error": "Not found"})
             return

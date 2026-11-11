@@ -6,7 +6,9 @@
 | `loudness.py` | Short-term loudness (BS.1770, 400 ms) scored against the player's calibration |
 | `likeness.py` | YAMNet dog-likeness (see [README_likeness.md](README_likeness.md)) |
 | `audio_io.py` | `load_audio(path)`: WAV directly, anything else through FFmpeg |
-| `server.py` | Local HTTP server behind the recorder page's Score take button (same numbers as `score.py`) |
+| `server.py` | Local HTTP server: scores a take, and signs players in (`accounts.py`) |
+| `accounts.py` | Email accounts and session cookies. Needs `DATABASE_URL` and Postgres (`docker compose up -d` from the repo root) |
+| `db/schema.sql` | Users, sessions, and the tables duels and solo barks will fill in |
 | `benchmark/` | Labelled clips and the likeness report |
 | `tests/` | pytest suite |
 

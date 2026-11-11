@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: barkoff
+      POSTGRES_PASSWORD: barkoff
+      POSTGRES_DB: barkoff
+    ports:
+      - "5432:5432"
+    volumes:
+      - barkoff_pg:/var/lib/postgresql/data
+      - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
+
+volumes:
+  barkoff_pg:

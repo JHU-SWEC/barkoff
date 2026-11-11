@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet, ScrollRestoration } from 'react-router'
+import { logoutAccount, useAccount } from '../account'
 import { BarkMark } from './BarkMark'
 import './AppShell.css'
 
@@ -11,6 +12,17 @@ const NAV_LINKS = [
 ]
 
 export function AppShell() {
+  const { account, setAccount } = useAccount()
+
+  async function signOut() {
+    try {
+      await logoutAccount()
+    } catch {
+      // Drop the local session even if the server is down.
+    }
+    setAccount(null)
+  }
+
   return (
     <>
       <header className="topbar on-ink">
@@ -26,9 +38,20 @@ export function AppShell() {
               </NavLink>
             ))}
           </nav>
-          <Link className="button button-secondary topbar-signin" to="/login">
-            Sign in
-          </Link>
+          {account ? (
+            <div className="topbar-account">
+              <Link className="topbar-name" to="/profile">
+                {account.displayName}
+              </Link>
+              <button className="button button-secondary topbar-signin" type="button" onClick={signOut}>
+                Sign out
+              </button>
+            </div>
+          ) : (
+            <Link className="button button-secondary topbar-signin" to="/login">
+              Sign in
+            </Link>
+          )}
         </div>
       </header>
 

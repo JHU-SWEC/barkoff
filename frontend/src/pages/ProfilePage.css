@@ -23,6 +23,18 @@
   line-height: 48px;
 }
 
+.profile-email {
+  margin: -12px 0 20px;
+}
+
+.profile-edit {
+  margin-top: 24px;
+}
+
+.profile-edit .field input {
+  max-width: 280px;
+}
+
 .profile-avatar {
   display: grid;
   place-items: center;

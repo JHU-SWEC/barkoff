@@ -1,5 +1,6 @@
 import { Navigate, createBrowserRouter } from 'react-router'
 import { RouterProvider } from 'react-router/dom'
+import { AccountProvider } from './account'
 import { AppShell } from './components/AppShell'
 import DuelPage from './pages/DuelPage'
 import HomePage from './pages/HomePage'
@@ -29,5 +30,9 @@ const router = createBrowserRouter([
 ])
 
 export default function App() {
-  return <RouterProvider router={router} />
+  return (
+    <AccountProvider>
+      <RouterProvider router={router} />
+    </AccountProvider>
+  )
 }

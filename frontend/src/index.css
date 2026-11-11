@@ -214,6 +214,26 @@ h2 {
   margin-right: 4px;
 }
 
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.field input {
+  height: var(--control-height);
+  padding: 0 12px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.form-error {
+  margin-top: 12px;
+  color: var(--negative);
+}
+
 /* Length: one segmented control on a track */
 .segmented {
   display: flex;

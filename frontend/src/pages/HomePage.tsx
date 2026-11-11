@@ -1,11 +1,16 @@
 import { Link } from 'react-router'
+import { useAccount } from '../account'
 import { CalibrationSummary } from '../components/CalibrationSummary'
 import { loadSoloRecord } from '../soloResults'
 import { SAMPLE_LEADERBOARD, SAMPLE_ME } from '../sampleData'
 import './HomePage.css'
 
 export default function HomePage() {
+  const { account } = useAccount()
   const { best } = loadSoloRecord()
+  const elo = account ? account.elo : SAMPLE_ME.elo
+  const wins = account ? account.wins : SAMPLE_ME.wins
+  const losses = account ? account.losses : SAMPLE_ME.losses
   return (
     <>
       <title>Bark Off</title>
@@ -38,17 +43,21 @@ export default function HomePage() {
         <section className="card" aria-labelledby="record-heading">
           <div className="card-head">
             <h2 id="record-heading">Your record</h2>
-            <span className="pill pill-warning">Elo is sample data</span>
+            {account ? (
+              <span className="pill pill-info">Signed in</span>
+            ) : (
+              <span className="pill pill-warning">Elo is sample data</span>
+            )}
           </div>
           <dl className="rows">
             <div className="row">
               <dt>Elo</dt>
-              <dd className="num">{SAMPLE_ME.elo}</dd>
+              <dd className="num">{elo}</dd>
             </div>
             <div className="row">
               <dt>Wins – losses</dt>
               <dd className="num">
-                {SAMPLE_ME.wins} – {SAMPLE_ME.losses}
+                {wins} – {losses}
               </dd>
             </div>
             <div className="row">
