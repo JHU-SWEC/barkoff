@@ -9,9 +9,11 @@
 | `server.py` | Local HTTP server: scores a take, signs players in, uploads/replays clips |
 | `accounts.py` | Email accounts and session cookies. Needs `DATABASE_URL` and Postgres (`docker compose up -d` from the repo root) |
 | `clips.py` | Upload/list/replay bark recordings (signed in). Metadata in Postgres; bytes via `storage.py` |
+| `leaderboard.py` | `leaderboard` table + `GET /api/leaderboard` (public). Synced from users / solo bests |
 | `storage.py` | Replaceable object storage. Default `CLIP_STORAGE=local` → `backend/data/clips/`. `s3` reserved for later |
-| `db/schema.sql` | Users, sessions, clips, and the tables duels will fill in |
+| `db/schema.sql` | Users, sessions, clips, leaderboard, and the tables duels will fill in |
 | `db/002_clips.sql` | Migration if the DB was created before the clips table |
+| `db/003_leaderboard.sql` | Migration if the DB was created before the leaderboard table |
 | `benchmark/` | Labelled clips and the likeness report |
 | `tests/` | pytest suite |
 

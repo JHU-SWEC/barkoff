@@ -9,6 +9,7 @@ export interface Account {
   elo: number
   wins: number
   losses: number
+  bestSoloScore: number | null
 }
 
 const UNREACHABLE = 'The server isn’t reachable. Start it with python backend/server.py.'

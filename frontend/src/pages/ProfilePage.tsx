@@ -8,19 +8,21 @@ import { Figure } from '../components/Figure'
 import { PageHeader } from '../components/PageHeader'
 import { StubNote } from '../components/StubNote'
 import { loadSoloRecord } from '../soloResults'
-import { SAMPLE_HISTORY, SAMPLE_ME } from '../sampleData'
 import './ProfilePage.css'
 
 export default function ProfilePage() {
   const { account, setAccount } = useAccount()
   const { best } = loadSoloRecord()
+  const localBest = best ? best.score.toFixed(2) : '—'
+  const accountBest =
+    account?.bestSoloScore != null ? account.bestSoloScore.toFixed(2) : localBest
 
-  if (!account) return <GuestProfile bestScore={best ? best.score.toFixed(2) : '—'} />
+  if (!account) return <GuestProfile bestScore={localBest} />
 
   return (
     <SignedInProfile
       account={account}
-      bestScore={best ? best.score.toFixed(2) : '—'}
+      bestScore={accountBest}
       onAccount={setAccount}
       onSignedOut={() => setAccount(null)}
     />
@@ -28,27 +30,24 @@ export default function ProfilePage() {
 }
 
 function GuestProfile({ bestScore }: { bestScore: string }) {
-  const played = SAMPLE_ME.wins + SAMPLE_ME.losses
   return (
     <>
       <PageHeader kicker="Your corner" title="Profile">
-        <StubNote>Mic check and best solo bark are real (kept in this browser). Elo and match history are samples until you sign in.</StubNote>
+        <StubNote>Mic check and best solo bark in this browser are real. Sign in for Elo, saved recordings, and a leaderboard row.</StubNote>
       </PageHeader>
       <div className="profile-layout">
         <div className="profile-main">
           <section className="card" aria-label="Player">
-            <PlayerId name={SAMPLE_ME.name} />
+            <PlayerId name="Guest" />
             <Link className="text-button" to="/login">
               Sign in to save your name
             </Link>
-            <RecordFigures
-              elo={String(SAMPLE_ME.elo)}
-              record={`${SAMPLE_ME.wins}–${SAMPLE_ME.losses}`}
-              winRate={`${Math.round((SAMPLE_ME.wins / played) * 100)}%`}
-              bestScore={bestScore}
-            />
+            <RecordFigures elo="—" record="—" winRate="—" bestScore={bestScore} />
           </section>
-          <History />
+          <section className="card" aria-labelledby="history-heading">
+            <h2 id="history-heading">Recent duels</h2>
+            <p className="quiet">Sign in once ranked duels exist to see match history here.</p>
+          </section>
         </div>
         <CalibrationSummary />
       </div>
@@ -225,40 +224,5 @@ function RecordFigures({
       <Figure label="Win rate" value={winRate} />
       <Figure label="Best solo bark" value={bestScore} />
     </dl>
-  )
-}
-
-function History() {
-  return (
-    <section className="card" aria-labelledby="history-heading">
-      <h2 id="history-heading">Recent duels</h2>
-      <table className="table">
-        <thead>
-          <tr>
-            <th scope="col">Opponent</th>
-            <th scope="col">Result</th>
-            <th scope="col">Rounds</th>
-            <th scope="col">Elo</th>
-            <th scope="col">When</th>
-          </tr>
-        </thead>
-        <tbody>
-          {SAMPLE_HISTORY.map((match) => (
-            <tr key={`${match.opponent}-${match.when}`}>
-              <th scope="row">{match.opponent}</th>
-              <td>
-                <span className={match.won ? 'pill pill-info' : 'pill pill-negative'}>{match.won ? 'Win' : 'Loss'}</span>
-              </td>
-              <td className="num">{match.rounds}</td>
-              <td className="num">
-                {match.eloChange > 0 ? '+' : '−'}
-                {Math.abs(match.eloChange)}
-              </td>
-              <td className="quiet">{match.when}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </section>
   )
 }

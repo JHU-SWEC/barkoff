@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { useAccount } from '../account'
+import { fetchAccount, useAccount } from '../account'
 import type { Calibration } from '../calibration'
 import { uploadClip } from '../clips'
 import { formatDb, formatDelta } from '../format'
@@ -26,7 +26,7 @@ export function ScorePanel({
   verdict: Verdict
   disabled: boolean
 }) {
-  const { account } = useAccount()
+  const { account, setAccount } = useAccount()
   // Results per take id, so switching takes keeps earlier scores.
   const [byTake, setByTake] = useState<Record<number, ScoreState>>({})
   const state = take ? byTake[take.id] : undefined
@@ -42,6 +42,8 @@ export function ScorePanel({
       if (verdict.ok && account) {
         try {
           clipId = (await uploadClip(take.blob, result, id)).id
+          const refreshed = await fetchAccount()
+          if (refreshed) setAccount(refreshed)
         } catch (err) {
           uploadNote = err instanceof Error ? err.message : 'Could not save the recording to your account.'
         }

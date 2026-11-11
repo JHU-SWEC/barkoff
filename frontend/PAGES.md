@@ -27,12 +27,12 @@ The site opens on Home. Sign in lives in the top bar and on Profile. A scored So
 | Route | Page | Status | What's real today | What it's waiting on |
 | --- | --- | --- | --- | --- |
 | `/login` | Login | Partly real | Create an account or sign in with email and password; continue as guest | Google and Apple sign-in |
-| `/` | Home | Partly real | Mode cards, Mic check, best solo bark, Elo when signed in | Leaderboard API for Top dogs |
+| `/` | Home | Partly real | Mode cards, Mic check, Elo/record when signed in, Top dogs from `/api/leaderboard` | — |
 | `/solo` | Single player | **Real** | The whole recorder: record, countdown, calibration, camera check, scoring; saves scores in this browser; when signed in, also uploads the audio clip | Calibration synced to the account |
 | `/duel` | Duel | Stub | Layout only, sample opponent | Matchmaking queue, realtime server, synced rounds |
 | `/results` | Results | Partly real | `?mode=solo`: the latest scored take, its breakdown, personal best, and replay when the clip was uploaded. Without it: sample duel | Duels for real rounds |
 | `/profile` | Profile | Partly real | Mic check, display name, saved bark replays when signed in | Saving Elo from real duels, match history |
-| `/leaderboard` | Leaderboard | Stub | Layout only, sample players | Leaderboard API |
+| `/leaderboard` | Leaderboard | **Real** | Live rankings from the `leaderboard` table | Elo changes from ranked duels |
 
 Anything else redirects to Home. Sample content lives in `src/sampleData.ts`, and every stub says so on the page. As a real API lands, delete its export and the compiler will point at each place to replace.
 

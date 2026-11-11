@@ -1,16 +1,47 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { useAccount } from '../account'
 import { CalibrationSummary } from '../components/CalibrationSummary'
+import { fetchLeaderboard, type LeaderboardPlayer } from '../leaderboard'
 import { loadSoloRecord } from '../soloResults'
-import { SAMPLE_LEADERBOARD, SAMPLE_ME } from '../sampleData'
 import './HomePage.css'
 
 export default function HomePage() {
   const { account } = useAccount()
   const { best } = loadSoloRecord()
-  const elo = account ? account.elo : SAMPLE_ME.elo
-  const wins = account ? account.wins : SAMPLE_ME.wins
-  const losses = account ? account.losses : SAMPLE_ME.losses
+  const [top, setTop] = useState<LeaderboardPlayer[] | null>(null)
+  const [topError, setTopError] = useState<string | null>(null)
+
+  const elo = account ? account.elo : null
+  const wins = account ? account.wins : null
+  const losses = account ? account.losses : null
+  const bestScore =
+    account?.bestSoloScore != null
+      ? account.bestSoloScore.toFixed(2)
+      : best
+        ? best.score.toFixed(2)
+        : '—'
+
+  useEffect(() => {
+    let cancelled = false
+    fetchLeaderboard(3)
+      .then((players) => {
+        if (!cancelled) {
+          setTop(players)
+          setTopError(null)
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setTop([])
+          setTopError(err instanceof Error ? err.message : 'Could not load leaderboard.')
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [account?.id, account?.displayName, account?.bestSoloScore])
+
   return (
     <>
       <title>Bark Off</title>
@@ -46,28 +77,26 @@ export default function HomePage() {
             {account ? (
               <span className="pill pill-info">Signed in</span>
             ) : (
-              <span className="pill pill-warning">Elo is sample data</span>
+              <span className="pill pill-warning">Guest</span>
             )}
           </div>
           <dl className="rows">
             <div className="row">
               <dt>Elo</dt>
-              <dd className="num">{elo}</dd>
+              <dd className="num">{elo ?? '—'}</dd>
             </div>
             <div className="row">
               <dt>Wins – losses</dt>
-              <dd className="num">
-                {wins} – {losses}
-              </dd>
+              <dd className="num">{wins != null && losses != null ? `${wins} – ${losses}` : '—'}</dd>
             </div>
             <div className="row">
               <dt>Best solo bark</dt>
-              <dd className="num">{best ? best.score.toFixed(2) : '—'}</dd>
+              <dd className="num">{bestScore}</dd>
             </div>
           </dl>
           <div className="card-actions">
-            <Link className="button button-secondary" to="/profile">
-              View profile
+            <Link className="button button-secondary" to={account ? '/profile' : '/login'}>
+              {account ? 'View profile' : 'Sign in'}
             </Link>
           </div>
         </section>
@@ -75,18 +104,25 @@ export default function HomePage() {
         <section className="card" aria-labelledby="top-heading">
           <div className="card-head">
             <h2 id="top-heading">Top dogs</h2>
-            <span className="pill pill-warning">Sample data</span>
           </div>
-          <ol className="rows top-dogs">
-            {SAMPLE_LEADERBOARD.slice(0, 3).map((player, i) => (
-              <li className="row" key={player.name}>
-                <span>
-                  <span className="top-rank num">{i + 1}</span> {player.name}
-                </span>
-                <span className="num">{player.elo}</span>
-              </li>
-            ))}
-          </ol>
+          {topError ? (
+            <p className="quiet">{topError}</p>
+          ) : top == null ? (
+            <p className="quiet">Loading…</p>
+          ) : top.length === 0 ? (
+            <p className="quiet">No accounts yet. Be the first on the board.</p>
+          ) : (
+            <ol className="rows top-dogs">
+              {top.map((player, i) => (
+                <li className="row" key={player.userId}>
+                  <span>
+                    <span className="top-rank num">{i + 1}</span> {player.displayName}
+                  </span>
+                  <span className="num">{player.elo}</span>
+                </li>
+              ))}
+            </ol>
+          )}
           <div className="card-actions">
             <Link className="button button-secondary" to="/leaderboard">
               Full leaderboard

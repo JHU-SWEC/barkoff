@@ -26,6 +26,9 @@ except ImportError:  # scored takes still work if the driver was never installed
     psycopg = None
     pg_errors = None
 
+# Imported lazily inside register/update to avoid a circular import at module load
+# (leaderboard imports accounts.connect).
+
 COOKIE = "barkoff_session"
 SESSION_DAYS = 14
 MAX_BODY = 8 * 1024
@@ -98,6 +101,7 @@ def _user_json(row: tuple) -> dict:
         "elo": elo,
         "wins": wins,
         "losses": losses,
+        "bestSoloScore": None,
     }
 
 
@@ -181,6 +185,9 @@ def register(body: dict) -> tuple[dict, str]:
             ).fetchone()
         except pg_errors.UniqueViolation as err:
             raise AccountError(409, "An account with that email already exists.") from err
+        import leaderboard as lb
+
+        lb.upsert_user(conn, row[0], row[2], row[3], row[4], row[5])
         token = _start_session(conn, row[0])
         conn.commit()
     return _user_json(row), token
@@ -198,7 +205,10 @@ def login(body: dict) -> tuple[dict, str]:
             raise AccountError(401, "Email or password is wrong.")
         token = _start_session(conn, row[0])
         conn.commit()
-    return _user_json(row[:-1]), token
+    account = current_user(token)
+    if account is None:
+        raise AccountError(500, "Session was created but could not be loaded.")
+    return account, token
 
 
 def _start_session(conn, user_id) -> str:
@@ -234,14 +244,19 @@ def current_user(token: str | None) -> dict | None:
     with _connect() as conn:
         row = conn.execute(
             f"""
-            SELECT {_USER_COLUMNS}
+            SELECT {_USER_COLUMNS}, solo_bests.score
             FROM sessions
             JOIN users ON users.id = sessions.user_id
+            LEFT JOIN solo_bests ON solo_bests.user_id = users.id
             WHERE sessions.token_hash = %s AND sessions.expires_at > now()
             """,
             (_token_hash(token),),
         ).fetchone()
-    return _user_json(row) if row else None
+    if row is None:
+        return None
+    account = _user_json(row[:-1])
+    account["bestSoloScore"] = row[-1]
+    return account
 
 
 def logout(token: str | None) -> None:
@@ -270,8 +285,13 @@ def update_profile(token: str | None, body: dict) -> dict:
         ).fetchone()
         if row is None:
             raise AccountError(401, "Sign in first.")
+        import leaderboard as lb
+
+        lb.upsert_user(conn, row[0], row[2], row[3], row[4], row[5])
         conn.commit()
-    return _user_json(row)
+    account = _user_json(row)
+    # bestSoloScore is not in RETURNING; reload so the client stays consistent.
+    return current_user(token) or account
 
 
 def handle(handler: BaseHTTPRequestHandler, action: str) -> None:

@@ -35,6 +35,7 @@ import numpy as np
 
 import accounts
 import clips
+import leaderboard
 import likeness
 import score as scorer
 from loudness import Calibration
@@ -92,6 +93,9 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == "/api/me":
             accounts.handle(self, "me")
+            return
+        if path == "/api/leaderboard":
+            leaderboard.handle(self)
             return
         if path == "/api/clips" or path.startswith("/api/clips/"):
             clips.handle(self, "GET")

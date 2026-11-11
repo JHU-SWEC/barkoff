@@ -15,6 +15,7 @@ from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
 import accounts
+import leaderboard as lb
 from storage import get_storage
 
 CLIP_DAYS = 30
@@ -213,6 +214,15 @@ def create_clip(handler: BaseHTTPRequestHandler) -> dict:
                     """,
                     (user["id"], score, loudness, likeness, clip_id, now),
                 )
+                lb.upsert_user(
+                    conn,
+                    user["id"],
+                    user["displayName"],
+                    user["elo"],
+                    user["wins"],
+                    user["losses"],
+                )
+                lb.set_best_solo(conn, user["id"], score)
             conn.commit()
     except accounts.AccountError:
         storage.delete(storage_key)

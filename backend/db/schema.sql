@@ -60,6 +60,21 @@ CREATE TABLE solo_bests (
     taken_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- Rankings snapshot for every account. Synced on register, profile edit, and solo bests.
+CREATE TABLE leaderboard (
+    user_id uuid PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+    display_name text NOT NULL,
+    elo integer NOT NULL DEFAULT 1000,
+    wins integer NOT NULL DEFAULT 0,
+    losses integer NOT NULL DEFAULT 0,
+    best_solo_score real,
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT leaderboard_elo_nonnegative CHECK (elo >= 0),
+    CONSTRAINT leaderboard_record_nonnegative CHECK (wins >= 0 AND losses >= 0)
+);
+
+CREATE INDEX leaderboard_elo ON leaderboard (elo DESC, best_solo_score DESC NULLS LAST);
+
 -- Mic check (room noise and speaking voice, LUFS). Still stored in the browser.
 CREATE TABLE calibrations (
     user_id uuid PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
