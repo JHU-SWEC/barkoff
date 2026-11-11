@@ -211,6 +211,23 @@ def _start_session(conn, user_id) -> str:
     return token
 
 
+def session_token(handler: BaseHTTPRequestHandler) -> str | None:
+    """Public wrapper so other route modules can read the session cookie."""
+    return _cookie(handler)
+
+
+def require_user(token: str | None) -> dict:
+    user = current_user(token)
+    if user is None:
+        raise AccountError(401, "Sign in first.")
+    return user
+
+
+def connect():
+    """Shared Postgres connection for account-backed features (clips, etc.)."""
+    return _connect()
+
+
 def current_user(token: str | None) -> dict | None:
     if not token:
         return None

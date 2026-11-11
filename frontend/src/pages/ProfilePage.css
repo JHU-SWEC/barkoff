@@ -35,6 +35,26 @@
   max-width: 280px;
 }
 
+.profile-clips {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.profile-clip-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.profile-clips audio {
+  display: block;
+  width: 100%;
+}
+
 .profile-avatar {
   display: grid;
   place-items: center;

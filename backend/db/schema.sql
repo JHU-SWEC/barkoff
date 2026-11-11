@@ -1,6 +1,6 @@
--- Bark Off accounts. Apply on an empty database (Docker does this on first start).
--- The API writes users and sessions. The other tables are the shape of data the
--- game already collects or will collect; nothing inserts into them yet.
+-- Bark Off accounts and clips. Apply on an empty database (Docker does this on first start).
+-- The API writes users, sessions, and clips. Match tables are the shape of data
+-- duels will collect; nothing inserts into them yet.
 
 CREATE TABLE users (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -26,12 +26,37 @@ CREATE TABLE sessions (
 
 CREATE INDEX sessions_user_id ON sessions (user_id);
 
--- Best solo bark for an account. The page still keeps this in the browser.
+-- Bark audio lives in object storage (local disk today). This row is the index.
+CREATE TABLE clips (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    kind text NOT NULL DEFAULT 'solo',
+    storage_key text NOT NULL UNIQUE,
+    content_type text NOT NULL,
+    byte_size integer NOT NULL,
+    duration_s real,
+    score real NOT NULL,
+    loudness real NOT NULL,
+    likeness real NOT NULL,
+    loudness_lufs real,
+    over_speech_lu real,
+    calibrated boolean NOT NULL DEFAULT false,
+    client_take_id integer,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    expires_at timestamptz NOT NULL,
+    CONSTRAINT clips_kind CHECK (kind IN ('solo', 'duel')),
+    CONSTRAINT clips_byte_size CHECK (byte_size > 0)
+);
+
+CREATE INDEX clips_user_score ON clips (user_id, kind, score DESC);
+
+-- Best solo bark for an account. Updated when a higher-scoring clip is uploaded.
 CREATE TABLE solo_bests (
     user_id uuid PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
     score real NOT NULL,
     loudness real NOT NULL,
     likeness real NOT NULL,
+    clip_id uuid REFERENCES clips (id) ON DELETE SET NULL,
     taken_at timestamptz NOT NULL DEFAULT now()
 );
 

@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { logoutAccount, saveDisplayName, useAccount } from '../account'
+import { listClips, type Clip } from '../clips'
 import { BarkMark } from '../components/BarkMark'
 import { CalibrationSummary } from '../components/CalibrationSummary'
 import { Figure } from '../components/Figure'
@@ -69,11 +70,35 @@ function SignedInProfile({
   const [name, setName] = useState(account.displayName)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [clips, setClips] = useState<Clip[] | null>(null)
+  const [clipsError, setClipsError] = useState<string | null>(null)
   const played = account.wins + account.losses
+  const bestClip = clips?.[0] ?? null
+  const serverBest = bestClip ? bestClip.score.toFixed(2) : bestScore
 
   useEffect(() => {
     setName(account.displayName)
   }, [account.displayName])
+
+  useEffect(() => {
+    let cancelled = false
+    listClips('solo', 5)
+      .then((next) => {
+        if (!cancelled) {
+          setClips(next)
+          setClipsError(null)
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setClips([])
+          setClipsError(err instanceof Error ? err.message : 'Could not load recordings.')
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [account.id])
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
@@ -100,7 +125,7 @@ function SignedInProfile({
   return (
     <>
       <PageHeader kicker="Your corner" title="Profile">
-        <p className="subline">Your name, Elo and record are saved to your account. Solo barks still stay in this browser.</p>
+        <p className="subline">Your name and scored recordings are saved to your account. Elo updates when duels exist.</p>
       </PageHeader>
       <div className="profile-layout">
         <div className="profile-main">
@@ -111,7 +136,7 @@ function SignedInProfile({
               elo={String(account.elo)}
               record={`${account.wins}–${account.losses}`}
               winRate={played ? `${Math.round((account.wins / played) * 100)}%` : '—'}
-              bestScore={bestScore}
+              bestScore={serverBest}
             />
             <form className="profile-edit" onSubmit={onSubmit}>
               <label className="field">
@@ -132,6 +157,33 @@ function SignedInProfile({
                 </button>
               </div>
             </form>
+          </section>
+          <section className="card" aria-labelledby="barks-heading">
+            <h2 id="barks-heading">Saved barks</h2>
+            {clipsError ? (
+              <p className="quiet">{clipsError}</p>
+            ) : clips == null ? (
+              <p className="quiet">Loading recordings…</p>
+            ) : clips.length === 0 ? (
+              <p className="quiet">No saved recordings yet. Score a take while signed in on Single player.</p>
+            ) : (
+              <ul className="profile-clips">
+                {clips.map((clip) => (
+                  <li key={clip.id}>
+                    <div className="profile-clip-meta">
+                      <span className="num">{clip.score.toFixed(2)}</span>
+                      <span className="quiet">
+                        {new Date(clip.createdAt).toLocaleString()}
+                        {bestClip?.id === clip.id ? ' · Best' : ''}
+                      </span>
+                    </div>
+                    <audio controls preload="metadata" src={clip.audioUrl}>
+                      Your browser can’t play this recording.
+                    </audio>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
           <section className="card" aria-labelledby="history-heading">
             <h2 id="history-heading">Recent duels</h2>

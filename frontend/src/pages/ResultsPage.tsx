@@ -89,6 +89,14 @@ function SoloResults() {
           </p>
           <Meter label="Loudness" value={last.loudness} />
           <Meter label="Likeness" value={last.likeness} />
+          {last.clipId && (
+            <div className="clip-replay">
+              <p className="quiet">Replay</p>
+              <audio controls preload="metadata" src={`/api/clips/${last.clipId}/audio`}>
+                Your browser can’t play this recording.
+              </audio>
+            </div>
+          )}
         </section>
         <section className="card" aria-labelledby="heard-heading">
           <h2 id="heard-heading">What the model heard</h2>
@@ -107,6 +115,7 @@ function SoloResults() {
               {Math.abs(last.overSpeechLu).toFixed(1)} LU
             </span>{' '}
             over speech. {runs} scored {runs === 1 ? 'bark' : 'barks'} in this browser.
+            {last.clipId ? ' Recording is saved on your account.' : ''}
           </p>
         </section>
       </div>

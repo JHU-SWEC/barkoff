@@ -1,7 +1,8 @@
 import type { ScoreResult } from './score'
 
-// Solo results kept in this browser until accounts exist: the latest scored take (so Results
-// survives a refresh) and the personal best. Numbers only, no audio.
+// Solo results kept in this browser: the latest scored take (so Results
+// survives a refresh) and the personal best. Numbers always; clipId when the
+// take was also uploaded to the account.
 
 export interface SoloResult {
   score: number
@@ -14,6 +15,8 @@ export interface SoloResult {
   top: { name: string; score: number }[]
   takeId: number
   scoredAt: number
+  /** Server clip id when the audio was saved for the signed-in account. */
+  clipId?: string
 }
 
 export interface SoloRecord {
@@ -37,7 +40,11 @@ export function loadSoloRecord(): SoloRecord {
 }
 
 /** Saves a scored take and returns the record plus whether it beat the previous best. */
-export function saveSoloResult(result: ScoreResult, takeId: number): { record: SoloRecord; newBest: boolean } {
+export function saveSoloResult(
+  result: ScoreResult,
+  takeId: number,
+  clipId?: string,
+): { record: SoloRecord; newBest: boolean } {
   const solo: SoloResult = {
     score: result.score,
     loudness: result.loudness,
@@ -49,6 +56,7 @@ export function saveSoloResult(result: ScoreResult, takeId: number): { record: S
     top: result.top,
     takeId,
     scoredAt: Date.now(),
+    clipId,
   }
   const prev = loadSoloRecord()
   const newBest = !prev.best || solo.score > prev.best.score

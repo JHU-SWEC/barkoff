@@ -15,8 +15,16 @@ POST /api/score?sr=48000[&noise_lufs=-58.2&speech_lufs=-27.5]
          "duration_s", "calibrated", "weights": {"loudness", "likeness"},
          "top": [{"name", "score"}, ...]}
 
-Standard library only (plus likeness.py's own deps). Single-threaded on
-purpose: the TFLite interpreter is shared and not safe to call concurrently.
+POST /api/clips  (signed in)
+    Header X-Barkoff-Meta: JSON score fields + contentType
+    Body: raw audio bytes (webm/m4a/…). Stored via storage.get_storage()
+    (local disk by default; CLIP_STORAGE=s3 later).
+
+GET /api/clips, /api/clips/:id, /api/clips/:id/audio  (signed in)
+
+Standard library only (plus likeness.py's own deps and psycopg for accounts/clips).
+Single-threaded on purpose: the TFLite interpreter is shared and not safe to
+call concurrently.
 """
 
 import json
@@ -26,6 +34,7 @@ from urllib.parse import parse_qs, urlparse
 import numpy as np
 
 import accounts
+import clips
 import likeness
 import score as scorer
 from loudness import Calibration
@@ -71,9 +80,21 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def _send_bytes(self, status: int, data: bytes, content_type: str) -> None:
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "private, max-age=3600")
+        self.end_headers()
+        self.wfile.write(data)
+
     def do_GET(self) -> None:
-        if urlparse(self.path).path == "/api/me":
+        path = urlparse(self.path).path
+        if path == "/api/me":
             accounts.handle(self, "me")
+            return
+        if path == "/api/clips" or path.startswith("/api/clips/"):
+            clips.handle(self, "GET")
             return
         self._send_json(404, {"error": "Not found"})
 
@@ -93,6 +114,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         if url.path == "/api/logout":
             accounts.handle(self, "logout")
+            return
+        if url.path == "/api/clips":
+            clips.handle(self, "POST")
             return
         if url.path != "/api/score":
             self._send_json(404, {"error": "Not found"})

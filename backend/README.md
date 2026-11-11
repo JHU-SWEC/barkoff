@@ -6,9 +6,12 @@
 | `loudness.py` | Short-term loudness (BS.1770, 400 ms) scored against the player's calibration |
 | `likeness.py` | YAMNet dog-likeness (see [README_likeness.md](README_likeness.md)) |
 | `audio_io.py` | `load_audio(path)`: WAV directly, anything else through FFmpeg |
-| `server.py` | Local HTTP server: scores a take, and signs players in (`accounts.py`) |
+| `server.py` | Local HTTP server: scores a take, signs players in, uploads/replays clips |
 | `accounts.py` | Email accounts and session cookies. Needs `DATABASE_URL` and Postgres (`docker compose up -d` from the repo root) |
-| `db/schema.sql` | Users, sessions, and the tables duels and solo barks will fill in |
+| `clips.py` | Upload/list/replay bark recordings (signed in). Metadata in Postgres; bytes via `storage.py` |
+| `storage.py` | Replaceable object storage. Default `CLIP_STORAGE=local` → `backend/data/clips/`. `s3` reserved for later |
+| `db/schema.sql` | Users, sessions, clips, and the tables duels will fill in |
+| `db/002_clips.sql` | Migration if the DB was created before the clips table |
 | `benchmark/` | Labelled clips and the likeness report |
 | `tests/` | pytest suite |
 

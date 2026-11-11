@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { useAccount } from '../account'
 import type { Calibration } from '../calibration'
+import { uploadClip } from '../clips'
 import { formatDb, formatDelta } from '../format'
 import { scoreTake, type ScoreResult } from '../score'
 import { saveSoloResult } from '../soloResults'
@@ -10,7 +12,7 @@ import { Figure } from './Figure'
 
 type ScoreState =
   | { status: 'scoring' }
-  | { status: 'done'; result: ScoreResult; newBest: boolean }
+  | { status: 'done'; result: ScoreResult; newBest: boolean; clipId?: string; uploadNote?: string }
   | { status: 'error'; message: string }
 
 export function ScorePanel({
@@ -24,6 +26,7 @@ export function ScorePanel({
   verdict: Verdict
   disabled: boolean
 }) {
+  const { account } = useAccount()
   // Results per take id, so switching takes keeps earlier scores.
   const [byTake, setByTake] = useState<Record<number, ScoreState>>({})
   const state = take ? byTake[take.id] : undefined
@@ -34,9 +37,20 @@ export function ScorePanel({
     setByTake((prev) => ({ ...prev, [id]: { status: 'scoring' } }))
     try {
       const result = await scoreTake(take.blob, calibration)
+      let clipId: string | undefined
+      let uploadNote: string | undefined
+      if (verdict.ok && account) {
+        try {
+          clipId = (await uploadClip(take.blob, result, id)).id
+        } catch (err) {
+          uploadNote = err instanceof Error ? err.message : 'Could not save the recording to your account.'
+        }
+      } else if (verdict.ok && !account) {
+        uploadNote = 'Sign in to save this recording to your account.'
+      }
       // Only takes that passed the camera check count toward the personal best.
-      const newBest = verdict.ok ? saveSoloResult(result, id).newBest : false
-      setByTake((prev) => ({ ...prev, [id]: { status: 'done', result, newBest } }))
+      const newBest = verdict.ok ? saveSoloResult(result, id, clipId).newBest : false
+      setByTake((prev) => ({ ...prev, [id]: { status: 'done', result, newBest, clipId, uploadNote } }))
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Scoring failed.'
       setByTake((prev) => ({ ...prev, [id]: { status: 'error', message } }))
@@ -44,6 +58,7 @@ export function ScorePanel({
   }
 
   const result = state?.status === 'done' ? state.result : null
+  const done = state?.status === 'done' ? state : null
   return (
     <section className="card score-card" aria-labelledby="score-heading">
       <div className="card-head">
@@ -62,6 +77,11 @@ export function ScorePanel({
             <span className="num">{formatDelta(result.over_speech_lu)} LU</span> over{' '}
             {result.calibrated ? 'your speaking voice' : 'a typical speaking voice (calibrate for yours)'}
           </p>
+          {done?.clipId ? (
+            <p className="quiet">Recording saved to your account.</p>
+          ) : done?.uploadNote ? (
+            <p className="quiet">{done.uploadNote}</p>
+          ) : null}
           <dl className="rows score-top">
             {result.top.map((c) => (
               <div className="row" key={c.name}>
@@ -84,7 +104,11 @@ export function ScorePanel({
       )}
       <div className="card-actions">
         {result && verdict.ok && (
-          <Link className="button button-primary" to="/results?mode=solo" state={{ newBest: state?.status === 'done' && state.newBest }}>
+          <Link
+            className="button button-primary"
+            to="/results?mode=solo"
+            state={{ newBest: done?.newBest ?? false }}
+          >
             See results
           </Link>
         )}

@@ -37,6 +37,16 @@
   margin-bottom: var(--gap);
 }
 
+.clip-replay {
+  margin-top: 16px;
+}
+
+.clip-replay audio {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+}
+
 .fighter .kicker {
   color: var(--muted);
 }
