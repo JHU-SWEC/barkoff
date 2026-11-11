@@ -12,11 +12,16 @@ Sources (pick one or more):
     --hf             Hugging Face dataset rmarcosg/bark-detection (needs
                      huggingface.co reachable and `pip install datasets`).
     --clips DIR      Your own clips: DIR/bark/* and DIR/not_bark/*.
+    --testset        The hand-labelled test set in scripts/eval/testset/
+                     (build it with testset/build_testset.py, label it with
+                     testset/label.html). Compares the model with the human
+                     scores in testset/labels/*.csv.
 
 Examples (run from the repo root):
     python scripts/eval/eval_likeness.py --esc50
     python scripts/eval/eval_likeness.py --esc50 --clips scripts/eval/clips --out results/baseline.csv
     python scripts/eval/eval_likeness.py --hf --hf-split train
+    python scripts/eval/eval_likeness.py --testset
 
 Every clip is decoded with FFmpeg to 16 kHz mono float32, the same input the
 site's likeness box sends to server.py.
@@ -140,6 +145,28 @@ def folder_clips(root: Path):
                 yield "clips", f"{sub}/{p.name}", is_bark, decode(p)
 
 
+TESTSET_DIR = EVAL_DIR / "testset"
+
+
+def testset_clips(testset_dir: Path):
+    """Yield (manifest row, audio) for every built clip in the test set."""
+    manifest = testset_dir / "manifest.csv"
+    if not (testset_dir / "audio").is_dir():
+        sys.exit(f"No test set audio. Run: python {testset_dir.relative_to(REPO_ROOT)}/build_testset.py")
+    with open(manifest, newline="") as f:
+        for row in csv.DictReader(f):
+            yield row, decode(testset_dir / "audio" / f"{row['id']}.wav")
+
+
+def load_labels(labels_dir: Path) -> dict[str, dict[str, float]]:
+    """{rater: {clip id: score}} from labels/<rater>.csv files written by label.html."""
+    raters = {}
+    for path in sorted(labels_dir.glob("*.csv")):
+        with open(path, newline="") as f:
+            raters[path.stem] = {r["id"]: float(r["score"]) for r in csv.DictReader(f) if r.get("score")}
+    return raters
+
+
 # ---------- metrics ----------
 
 def auc(pos: np.ndarray, neg: np.ndarray) -> float:
@@ -209,6 +236,66 @@ def report(rows: list[dict], threshold: float) -> None:
 
 # ---------- main ----------
 
+def spearman(a, b) -> float:
+    from scipy.stats import spearmanr
+    return float(spearmanr(a, b).statistic) if len(a) > 2 else float("nan")
+
+
+def testset_report(rows: list[dict], labels_dir: Path) -> None:
+    """Model vs hand labels on the test set."""
+    print("\n=== test set: model likeness by tier_prior (rough category guess, not a label) ===")
+    for tier in ("bark", "close", "far", "unknown"):
+        s = np.array([r["likeness"] for r in rows if r["tier_prior"] == tier])
+        if len(s):
+            print(describe(tier, s))
+
+    raters = load_labels(labels_dir)
+    if not raters:
+        print(f"\nNo hand labels yet in {labels_dir.relative_to(REPO_ROOT)}/. Label the clips with "
+              f"testset/label.html and save the CSV there to compare model vs human.")
+        return
+
+    # Average the raters per clip.
+    for r in rows:
+        scores = [lab[r["id"]] for lab in raters.values() if r["id"] in lab]
+        r["human"] = float(np.mean(scores)) if scores else None
+    labelled = [r for r in rows if r["human"] is not None]
+    human = np.array([r["human"] for r in labelled])
+    print(f"\n=== test set: model vs hand labels ({len(labelled)} of {len(rows)} clips labelled, "
+          f"raters: {', '.join(raters)}) ===")
+    if len(labelled) < 3:
+        print("Label at least 3 clips to compare.")
+        return
+
+    if len(raters) > 1:
+        names = list(raters)
+        for i, a in enumerate(names):
+            for b in names[i + 1:]:
+                both = sorted(set(raters[a]) & set(raters[b]))
+                if len(both) > 2:
+                    x = np.array([raters[a][k] for k in both]); y = np.array([raters[b][k] for k in both])
+                    print(f"raters {a} vs {b}: Spearman {spearman(x, y):.2f}, "
+                          f"mean |difference| {np.abs(x - y).mean():.2f} on {len(both)} clips")
+
+    for part in PARTS:
+        m = np.array([r[part] for r in labelled])
+        print(f"{part:<12} Spearman vs human {spearman(m, human):.2f}   "
+              f"mean |model - human| {np.abs(m - human).mean():.2f}   "
+              f"AUC (human >= 0.5 = bark) {auc(m[human >= 0.5], m[human < 0.5]):.3f}")
+
+    print("\nModel likeness by how bark-like humans rated the clip:")
+    for name, lo, hi in (("human >= 0.75", 0.75, 1.01), ("human 0.25-0.75", 0.25, 0.75),
+                         ("human < 0.25", -0.01, 0.25)):
+        m = np.array([r["likeness"] for r in labelled if lo <= r["human"] < hi])
+        if len(m):
+            print(f"  {name:<16} n={len(m):<3} model mean={m.mean():.2f}  std={m.std():.2f}  "
+                  f"min={m.min():.2f}  max={m.max():.2f}")
+
+    print("\nBiggest disagreements (model likeness vs human):")
+    for r in sorted(labelled, key=lambda r: -abs(r["likeness"] - r["human"]))[:10]:
+        print(f"  {r['id']}  model {r['likeness']:.2f}  human {r['human']:.2f}  {r['category']}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--esc50", action="store_true", help="use ESC-50 (dog vs other classes)")
@@ -219,6 +306,9 @@ def main() -> None:
     ap.add_argument("--hf-label-col", default=None, help="label column (auto-detected if omitted)")
     ap.add_argument("--hf-bark-label", default="bark", help="label value/name that means bark")
     ap.add_argument("--clips", type=Path, help="folder with bark/ and not_bark/ subfolders")
+    ap.add_argument("--testset", action="store_true", help="the hand-labelled test set (testset/)")
+    ap.add_argument("--labels", type=Path, default=TESTSET_DIR / "labels",
+                    help="folder of <rater>.csv hand labels (default testset/labels)")
     ap.add_argument("--threshold", type=float, default=0.5)
     ap.add_argument("--out", type=Path, help="write per-clip scores to this CSV")
     args = ap.parse_args()
@@ -230,8 +320,8 @@ def main() -> None:
         sources.append(hf_clips(args.hf_split, args.hf_label_col, args.hf_bark_label))
     if args.clips:
         sources.append(folder_clips(args.clips))
-    if not sources:
-        ap.error("pick at least one of --esc50, --hf, --clips")
+    if not sources and not args.testset:
+        ap.error("pick at least one of --esc50, --hf, --clips, --testset")
 
     rows = []
     for src in sources:
@@ -244,9 +334,17 @@ def main() -> None:
             if len(rows) % 50 == 0:
                 print(f"  scored {len(rows)} clips", file=sys.stderr)
 
-    report(rows, args.threshold)
+    if rows:
+        report(rows, args.threshold)
 
-    if args.out:
+    if args.testset:
+        test_rows = []
+        for row, audio in testset_clips(TESTSET_DIR):
+            parts = likeness.likeness_parts(audio, SR)
+            test_rows.append({**row, **{p: parts[p] for p in PARTS}})
+        testset_report(test_rows, args.labels)
+
+    if args.out and rows:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         with open(args.out, "w", newline="") as f:
             w = csv.DictWriter(f, fieldnames=["source", "name", "is_bark", *PARTS])
