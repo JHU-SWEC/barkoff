@@ -243,8 +243,9 @@ def current_user(token: str | None) -> dict | None:
         return None
     with _connect() as conn:
         row = conn.execute(
-            f"""
-            SELECT {_USER_COLUMNS}, solo_bests.score
+            """
+            SELECT users.id, users.email, users.display_name, users.elo, users.wins, users.losses,
+                   solo_bests.score
             FROM sessions
             JOIN users ON users.id = sessions.user_id
             LEFT JOIN solo_bests ON solo_bests.user_id = users.id
