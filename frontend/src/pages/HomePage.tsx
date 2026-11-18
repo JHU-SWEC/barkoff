@@ -90,6 +90,13 @@ export default function HomePage() {
 
       <DogPicker />
 
+      <Link className="help-banner" to="/score-barks">
+        <span className="kicker">Help train the model</span>
+        <span className="help-banner-title">Score barks</span>
+        <span className="help-banner-copy">Rate people’s dog impressions: how dog-like, and what kind of bark.</span>
+        <span className="help-banner-cta">Start scoring →</span>
+      </Link>
+
       <div className="home-strip">
         <CalibrationSummary />
 

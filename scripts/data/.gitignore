@@ -1,0 +1,5 @@
+# Audio is rebuilt from human_barks/manifest.csv; own recordings stay on the machine they were made on.
+human_barks/audio/
+human_barks/own/
+human_barks/labels/*.tmp
+__pycache__/

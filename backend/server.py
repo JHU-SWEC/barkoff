@@ -31,6 +31,14 @@ and every duel response carries server_now so clients can sync their clocks):
                                         position is the camera verdict ("ok" or a foul)
     GET    /api/leaderboard             players by Elo
 
+Scoring the human-bark clips by hand (bark_scores.py; saved to scripts/data/human_barks/labels/):
+    GET    /api/scoring/clips                     clip ids with audio built here
+    GET    /api/scoring/audio/<id>.wav            a clip
+    GET    /api/scoring/scores?scorer=            one scorer's scores
+    POST   /api/scoring/scores?scorer=            {"id", "likeness", "type", "not_human", "bad_audio", "notes"}
+                                                  or {"id", "clear": true}; saved at once
+    GET    /api/scoring/team                      how far each teammate has got
+
 Players and duels live in memory until profiles land, so a restart resets them.
 
 Standard library only (plus likeness.py's own deps). Single-threaded on
@@ -46,6 +54,7 @@ from urllib.parse import parse_qs, urlparse
 
 import numpy as np
 
+import bark_scores
 import likeness
 import score as scorer
 from duels import Arena, DuelError, bark_from_score
@@ -60,6 +69,7 @@ TOP_K = 5
 PLAYER_ID = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 MAX_NAME = 24
 DUEL_ROUND = re.compile(r"^/api/duels/([A-Za-z0-9_-]+)/rounds/(\d+)$")
+SCORING_AUDIO = re.compile(r"^/api/scoring/audio/(h\d{3,})\.wav$")
 DUEL = re.compile(r"^/api/duels/([A-Za-z0-9_-]+)$")
 
 arena = Arena()
@@ -119,12 +129,28 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(400, {"error": str(err)})
         except DuelError as err:
             self._send_json(409, {"error": str(err)})
+        except bark_scores.ScoreError as err:
+            self._send_json(400, {"error": str(err)})
         except NotFound as err:
             self._send_json(404, {"error": str(err)})
         except Exception as err:  # report model errors to the page instead of dropping the connection
             self._send_json(500, {"error": str(err)})
 
     def do_GET(self) -> None:
+        # Clip audio is a file, not JSON.
+        if m := SCORING_AUDIO.match(urlparse(self.path).path):
+            path = bark_scores.audio_path(m[1])
+            if path is None:
+                self._send_json(404, {"error": "Clip audio not built. Run scripts/data/human_barks/build.py"})
+                return
+            data = path.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", "audio/wav")
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Cache-Control", "max-age=86400")
+            self.end_headers()
+            self.wfile.write(data)
+            return
         self._handle("GET")
 
     def do_POST(self) -> None:
@@ -144,6 +170,16 @@ class Handler(BaseHTTPRequestHandler):
                 player_id(body.get("id")), player_name(body.get("name")), str(body.get("dog", "shiba"))[:24]
             )
             return player.public()
+        if path == "/api/scoring/clips" and method == "GET":
+            return bark_scores.clips()
+        if path == "/api/scoring/scores":
+            who = query.get("scorer", [""])[0]
+            if method == "GET":
+                return {"scores": bark_scores.read(who)}
+            if method == "POST":
+                return bark_scores.save(who, self._read_json())
+        if path == "/api/scoring/team" and method == "GET":
+            return bark_scores.team()
         if path == "/api/leaderboard" and method == "GET":
             return arena.leaderboard()
         if path == "/api/queue":

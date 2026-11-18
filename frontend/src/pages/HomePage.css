@@ -359,3 +359,45 @@ body:has(.bone-field) {
     transform: none;
   }
 }
+
+/* A strip linking to Score barks, between the dog picker and the cards. */
+.help-banner {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 4px 20px;
+  margin-bottom: var(--gap);
+  padding: 18px 24px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  text-decoration: none;
+}
+
+.help-banner:hover {
+  background: var(--ball);
+}
+
+.help-banner .kicker {
+  grid-column: 1 / -1;
+  color: var(--muted);
+}
+
+.help-banner-title {
+  font-family: var(--font-display);
+  font-size: 28px;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.help-banner-cta {
+  font-family: var(--font-display);
+  font-size: 17px;
+  text-transform: uppercase;
+}
+
+@media (max-width: 640px) {
+  .help-banner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

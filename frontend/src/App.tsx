@@ -27,6 +27,7 @@ const router = createBrowserRouter([
           { path: 'results', element: <ResultsPage /> },
           { path: 'profile', element: <ProfilePage /> },
           { path: 'leaderboard', element: <LeaderboardPage /> },
+          { path: 'score-barks', lazy: async () => ({ Component: (await import('./pages/ScoreBarksPage')).default }) },
           { path: '*', element: <Navigate to="/" replace /> },
         ],
       },
