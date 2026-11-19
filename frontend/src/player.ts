@@ -2,6 +2,7 @@
 // its own player: open two tabs to duel yourself. The name is shared across tabs.
 
 const ID_KEY = 'barkoff.player'
+const SECRET_KEY = 'barkoff.secret'
 const NAME_KEY = 'barkoff.name'
 
 export const MAX_NAME = 24
@@ -10,20 +11,27 @@ function newId(): string {
   return `guest-${crypto.randomUUID()}`
 }
 
-export function playerId(): string {
+function stored(key: string, fallback: Map<string, string>): string {
   try {
-    let id = sessionStorage.getItem(ID_KEY)
-    if (!id) {
-      id = newId()
-      sessionStorage.setItem(ID_KEY, id)
+    let value = sessionStorage.getItem(key)
+    if (!value) {
+      value = newId()
+      sessionStorage.setItem(key, value)
     }
-    return id
+    return value
   } catch {
-    return (fallbackId ??= newId())
+    if (!fallback.has(key)) fallback.set(key, newId())
+    return fallback.get(key)!
   }
 }
 
-let fallbackId: string | null = null
+const fallbacks = new Map<string, string>()
+
+/** Public: opponents and the leaderboard see it. */
+export const playerId = (): string => stored(ID_KEY, fallbacks)
+
+/** Never shown to anyone: proves to the duel server that this tab is playerId(). */
+export const playerSecret = (): string => stored(SECRET_KEY, fallbacks)
 
 export function loadName(): string {
   try {

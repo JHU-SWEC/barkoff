@@ -2,3 +2,5 @@
 -r requirements-likeness.txt
 pyloudnorm>=0.1.1
 pytest>=8.0
+# The duel socket (realtime.py). 14+ for the asyncio server API.
+websockets>=14

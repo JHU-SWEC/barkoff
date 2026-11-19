@@ -1,28 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Calibration } from './calibration'
-import {
-  forfeitDuel,
-  getDuel,
-  startBotDuel,
-  type BotLevel,
-  joinQueue,
-  leaveQueue,
-  pollQueue,
-  registerPlayer,
-  submitRound,
-  type DuelRound,
-  type DuelView,
-  type Foul,
-} from './duelApi'
-import { playerId } from './player'
+import { encodeTake, type BotLevel, type DuelRound, type DuelView, type Foul } from './duelApi'
+import { DuelSocket, UNREACHABLE, type ServerMessage } from './duelSocket'
+import { playerId, playerSecret } from './player'
 
-// The duel client: lobby -> queue -> duel. Polls the server (1 s in the queue, 0.5 s in a duel) and
-// keeps a clock offset from the lowest-latency reply, so both players' countdowns and the BARK! cue
-// land at the same moment. A realtime socket can replace the polling without changing the page.
+// The duel client: lobby -> queue -> duel, over one socket to the game server (duelSocket.ts).
+// The server pushes queue progress and a fresh view whenever the duel changes; the page works out
+// countdowns and the BARK! cue itself from the round times and the socket's synced clock.
 
-const QUEUE_POLL_MS = 1000
-const DUEL_POLL_MS = 500
 const COUNTDOWN_S = 3
+const LOST = 'Lost the duel server. Reconnecting…'
+const GONE = 'That duel is gone: the duel server restarted while you were away.'
 
 export type DuelStage =
   | { kind: 'lobby' }
@@ -57,157 +45,132 @@ function message(err: unknown): string {
 
 export function useDuel() {
   const [id] = useState(playerId)
+  const [secret] = useState(playerSecret)
   const [stage, setStage] = useState<DuelStage>({ kind: 'lobby' })
   const [error, setError] = useState<string | null>(null)
-  const clock = useRef({ offset: 0, rttMs: Infinity })
+  const socket = useRef<DuelSocket | null>(null)
+  // Socket events arrive between renders, so they read the stage from here, kept in step by go().
+  const stageRef = useRef<DuelStage>(stage)
+  const go = useCallback((next: DuelStage) => {
+    stageRef.current = next
+    setStage(next)
+  }, [])
+  // What the last Find match asked for, to get back in line after a reconnect.
+  const lastQueue = useRef<{ name: string; dog: string } | null>(null)
 
-  // Keep the offset from the fastest round trip: its midpoint is the best guess of when the server spoke.
-  const synced = useCallback(async (request: () => Promise<DuelView>) => {
-    const t0 = Date.now()
-    const view = await request()
-    const t1 = Date.now()
-    if (t1 - t0 <= clock.current.rttMs) clock.current = { offset: view.server_now - (t0 + t1) / 2000, rttMs: t1 - t0 }
-    return view
+  useEffect(() => {
+    const unfinished = () => {
+      const st = stageRef.current
+      return st.kind === 'duel' && st.view.result == null ? st.view.id : null
+    }
+    const onMessage = (msg: ServerMessage) => {
+      const st = stageRef.current
+      if (msg.type === 'queue') {
+        if (msg.status === 'waiting' && (st.kind === 'joining' || st.kind === 'queue')) {
+          go({ kind: 'queue', waitedS: msg.waited_s, window: msg.window, inQueue: msg.in_queue })
+        }
+      } else if (msg.type === 'duel') {
+        if (st.kind === 'lobby') {
+          // Matched just as we left the queue: hand it straight back so the opponent isn't left waiting.
+          if (msg.view.result == null) s.send({ type: 'forfeit' })
+        } else if (st.kind !== 'duel' || st.view.id === msg.view.id) {
+          go({ kind: 'duel', view: msg.view })
+        }
+      } else if (msg.type === 'duel_gone') {
+        if (st.kind === 'duel' && st.view.id === msg.duel_id) {
+          setError(GONE)
+          go({ kind: 'lobby' })
+        }
+      } else {
+        setError(msg.message)
+        if (st.kind === 'joining') go({ kind: 'lobby' })
+      }
+    }
+    const onStatus = (ready: boolean) => {
+      const st = stageRef.current
+      if (!ready) {
+        if (st.kind === 'joining') go({ kind: 'lobby' })
+        if (st.kind !== 'lobby' && !(st.kind === 'duel' && st.view.result)) setError(LOST)
+        return
+      }
+      setError((e) => (e === LOST ? null : e))
+      // The server took us out of the queue when the connection dropped; get back in line.
+      // (An unfinished duel comes back by itself: hello carries it as resume.)
+      if (st.kind === 'queue' && lastQueue.current) s.send({ type: 'queue', ...lastQueue.current })
+    }
+    const s = new DuelSocket({ hello: () => ({ id, secret, resume: unfinished() }), message: onMessage, status: onStatus })
+    socket.current = s
+    return () => {
+      // Leaving the page mid-duel gives it up now, rather than after the server's reconnect grace.
+      // Queued, closing is enough: the server takes us out.
+      if (unfinished()) s.send({ type: 'forfeit' })
+      s.close()
+      socket.current = null
+    }
+  }, [id, secret, go])
+
+  const connected = useCallback(async () => {
+    const s = socket.current
+    if (!s) throw new Error(UNREACHABLE)
+    await s.whenReady()
+    return s
   }, [])
 
-  const serverNow = useCallback(() => Date.now() / 1000 + clock.current.offset, [])
+  const serverNow = useCallback(() => socket.current?.serverNow() ?? Date.now() / 1000, [])
 
   const findMatch = useCallback(
     async (name: string, dog: string) => {
       setError(null)
-      setStage({ kind: 'joining' })
+      go({ kind: 'joining' })
       try {
-        await registerPlayer({ id, name, dog })
-        const status = await joinQueue(id)
-        if (status.status === 'matched') setStage({ kind: 'duel', view: await synced(() => getDuel(status.duel_id, id)) })
-        else if (status.status === 'waiting') {
-          setStage({ kind: 'queue', waitedS: status.waited_s, window: status.window, inQueue: status.in_queue })
-        } else setStage({ kind: 'lobby' })
+        const s = await connected()
+        if (stageRef.current.kind !== 'joining') return // cancelled while connecting
+        lastQueue.current = { name, dog }
+        s.send({ type: 'queue', name, dog })
       } catch (err) {
         setError(message(err))
-        setStage({ kind: 'lobby' })
+        go({ kind: 'lobby' })
       }
     },
-    [id, synced],
+    [connected, go],
   )
 
   const cancel = useCallback(async () => {
-    setStage({ kind: 'lobby' })
-    await leaveQueue(id).catch(() => {})
-  }, [id])
+    go({ kind: 'lobby' })
+    socket.current?.send({ type: 'leave_queue' })
+  }, [go])
 
   const playBot = useCallback(
     async (name: string, dog: string, level: BotLevel) => {
       setError(null)
-      setStage({ kind: 'joining' })
+      go({ kind: 'joining' })
       try {
-        await registerPlayer({ id, name, dog })
-        await leaveQueue(id).catch(() => {})
-        const status = await startBotDuel(id, level)
-        if (status.status !== 'matched') throw new Error('The bot didn’t show up.')
-        setStage({ kind: 'duel', view: await synced(() => getDuel(status.duel_id, id)) })
+        const s = await connected()
+        if (stageRef.current.kind !== 'joining') return
+        s.send({ type: 'bot', name, dog, level }) // also takes us out of the ranked queue
       } catch (err) {
         setError(message(err))
-        setStage({ kind: 'lobby' })
+        go({ kind: 'lobby' })
       }
     },
-    [id, synced],
+    [connected, go],
   )
 
-  const backToLobby = useCallback(() => setStage({ kind: 'lobby' }), [])
+  const backToLobby = useCallback(() => go({ kind: 'lobby' }), [go])
 
+  /** Sends a round's take. The server scores it and pushes the duel; a refusal arrives as an error. */
   const submit = useCallback(
     async (duelId: string, round: number, blob: Blob, calibration: Calibration | null, position: 'ok' | Foul) => {
       try {
-        const view = await synced(() => submitRound(duelId, id, round, blob, calibration, position))
-        setStage({ kind: 'duel', view })
+        const frame = await encodeTake(duelId, round, blob, calibration, position)
+        const s = await connected()
+        s.send(frame)
       } catch (err) {
         setError(message(err))
       }
     },
-    [id, synced],
+    [connected],
   )
-
-  // Queue: poll until matched.
-  const queued = stage.kind === 'queue'
-  useEffect(() => {
-    if (!queued) return
-    let stopped = false
-    const tick = async () => {
-      try {
-        const status = await pollQueue(id)
-        if (stopped) return
-        if (status.status === 'matched') {
-          const view = await synced(() => getDuel(status.duel_id, id))
-          if (!stopped) setStage({ kind: 'duel', view })
-        } else if (status.status === 'waiting') {
-          setStage({ kind: 'queue', waitedS: status.waited_s, window: status.window, inQueue: status.in_queue })
-        } else setStage({ kind: 'lobby' })
-      } catch (err) {
-        if (stopped) return
-        setError(message(err))
-        setStage({ kind: 'lobby' })
-      }
-    }
-    const timer = setInterval(() => void tick(), QUEUE_POLL_MS)
-    return () => {
-      stopped = true
-      clearInterval(timer)
-    }
-  }, [queued, id, synced])
-
-  // Leaving the page while queued takes you out of the queue.
-  useEffect(() => {
-    if (!queued) return
-    const leave = () => void leaveQueue(id).catch(() => {})
-    window.addEventListener('pagehide', leave)
-    return () => {
-      window.removeEventListener('pagehide', leave)
-    }
-  }, [queued, id])
-  const stageRef = useRef(stage)
-  useEffect(() => {
-    stageRef.current = stage
-  }, [stage])
-  useEffect(() => () => void (stageRef.current.kind === 'queue' && leaveQueue(id).catch(() => {})), [id])
-
-  // Leaving mid-duel (Leave, another page, closing the tab) gives the duel up, so the opponent
-  // isn't left waiting and the server doesn't hold you in it.
-  const unfinished = stage.kind === 'duel' && stage.view.result == null
-  useEffect(() => {
-    if (!unfinished) return
-    const leave = () => void forfeitDuel(id).catch(() => {})
-    window.addEventListener('pagehide', leave)
-    return () => {
-      window.removeEventListener('pagehide', leave)
-      if (stageRef.current.kind === 'duel' && stageRef.current.view.result == null) leave()
-    }
-  }, [unfinished, id])
-
-  // Duel: poll for the opponent's progress and round results until it's over.
-  const duelId = stage.kind === 'duel' ? stage.view.id : null
-  const over = stage.kind === 'duel' && stage.view.result != null
-  useEffect(() => {
-    if (!duelId || over) return
-    let stopped = false
-    let inFlight = false
-    const timer = setInterval(async () => {
-      if (inFlight) return
-      inFlight = true
-      try {
-        const view = await synced(() => getDuel(duelId, id))
-        if (!stopped) setStage({ kind: 'duel', view })
-      } catch (err) {
-        if (!stopped) setError(message(err))
-      } finally {
-        inFlight = false
-      }
-    }, DUEL_POLL_MS)
-    return () => {
-      stopped = true
-      clearInterval(timer)
-    }
-  }, [duelId, over, id, synced])
 
   return { playerId: id, stage, error, serverNow, findMatch, playBot, cancel, submit, backToLobby }
 }

@@ -1,8 +1,8 @@
 import type { Calibration } from './calibration'
 import { decodeMono } from './score'
 
-// The ranked duel API on the local server (backend/server.py, rules in backend/duels.py).
-// Field names match the server's JSON. Times are server epoch seconds.
+// What the duel server sends and takes (backend/realtime.py over the socket in duelSocket.ts,
+// rules in backend/duels.py). Field names match the server's JSON. Times are server epoch seconds.
 
 export interface DuelPlayer {
   id: string
@@ -73,10 +73,39 @@ export interface DuelView {
   } | null
 }
 
+/** Queue news over the socket. Being matched arrives as the duel itself. */
 export type QueueStatus =
   | { status: 'idle' }
   | { status: 'waiting'; waited_s: number; window: number; in_queue: number }
-  | { status: 'matched'; duel_id: string }
+
+export type BotLevel = 'easy' | 'normal' | 'hard'
+
+/** A round's take as one binary socket frame: uint32 header length, the JSON header, then the
+ *  float32 samples. The server scores it, applies the camera verdict and pushes the duel. */
+export async function encodeTake(
+  duelId: string,
+  round: number,
+  blob: Blob,
+  calibration: Calibration | null,
+  position: 'ok' | Foul,
+): Promise<ArrayBuffer> {
+  const audio = await decodeMono(blob)
+  const header = new TextEncoder().encode(
+    JSON.stringify({
+      duel_id: duelId,
+      round,
+      sr: audio.rate,
+      position,
+      ...(calibration && { noise_lufs: calibration.noiseLufs, speech_lufs: calibration.speechLufs }),
+    }),
+  )
+  const samples = new Uint8Array(audio.samples.buffer, audio.samples.byteOffset, audio.samples.byteLength)
+  const frame = new Uint8Array(4 + header.length + samples.length)
+  new DataView(frame.buffer).setUint32(0, header.length, true)
+  frame.set(header, 4)
+  frame.set(samples, 4 + header.length)
+  return frame.buffer
+}
 
 const UNREACHABLE = 'The duel server isn’t reachable. Start it with python backend/server.py.'
 
@@ -90,55 +119,6 @@ async function call<T>(method: string, path: string, init: RequestInit = {}): Pr
   const body = await res.json().catch(() => null)
   if (!res.ok) throw new Error(body?.error ?? UNREACHABLE)
   return body as T
-}
-
-const q = (playerId: string) => `player_id=${encodeURIComponent(playerId)}`
-
-export function registerPlayer(player: { id: string; name: string; dog: string }): Promise<DuelPlayer> {
-  return call('POST', '/api/players', {
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(player),
-  })
-}
-
-export const joinQueue = (playerId: string) => call<QueueStatus>('POST', `/api/queue?${q(playerId)}`)
-export const pollQueue = (playerId: string) => call<QueueStatus>('GET', `/api/queue?${q(playerId)}`)
-
-/** keepalive so leaving still reaches the server when the tab is closing. */
-export const leaveQueue = (playerId: string) =>
-  call<QueueStatus>('DELETE', `/api/queue?${q(playerId)}`, { keepalive: true })
-
-/** Leave an unfinished duel; keepalive so it still lands when the tab is closing. */
-export const forfeitDuel = (playerId: string) =>
-  call<QueueStatus>('POST', `/api/duels/forfeit?${q(playerId)}`, { keepalive: true })
-
-export type BotLevel = 'easy' | 'normal' | 'hard'
-
-export const startBotDuel = (playerId: string, level: BotLevel) =>
-  call<QueueStatus>('POST', `/api/duels/bot?${q(playerId)}&level=${level}`)
-
-export const getDuel = (duelId: string, playerId: string) =>
-  call<DuelView>('GET', `/api/duels/${encodeURIComponent(duelId)}?${q(playerId)}`)
-
-/** Uploads a round's take; the server scores it, applies the camera verdict and returns the duel. */
-export async function submitRound(
-  duelId: string,
-  playerId: string,
-  round: number,
-  blob: Blob,
-  calibration: Calibration | null,
-  position: 'ok' | Foul,
-): Promise<DuelView> {
-  const audio = await decodeMono(blob)
-  const params = new URLSearchParams({ player_id: playerId, sr: String(audio.rate), position })
-  if (calibration) {
-    params.set('noise_lufs', calibration.noiseLufs.toFixed(2))
-    params.set('speech_lufs', calibration.speechLufs.toFixed(2))
-  }
-  return call('POST', `/api/duels/${encodeURIComponent(duelId)}/rounds/${round}?${params}`, {
-    headers: { 'Content-Type': 'application/octet-stream' },
-    body: new Blob([audio.samples]),
-  })
 }
 
 export const fetchLeaderboard = () => call<DuelPlayer[]>('GET', '/api/leaderboard')

@@ -29,9 +29,11 @@ def match():
     arena.register("a", "Alice", "shiba")
     arena.register("b", "Bob", "pug")
     arena.join_queue("a", now=0)
-    status = arena.join_queue("b", now=0)
-    assert status["status"] == "matched"
-    return arena, status["duel_id"]
+    assert arena.join_queue("b", now=0)["status"] == "waiting"  # pairing is the matchmaker's job
+    [duel] = arena.match(now=0)
+    status = arena.queue_status("b", now=0)
+    assert status == {"status": "matched", "duel_id": duel.id}
+    return arena, duel.id
 
 
 def play_round(arena, duel_id, score_a, score_b):
@@ -126,6 +128,51 @@ def test_a_take_that_never_arrives_scores_zero(match):
     view = arena.duel_view(duel_id, "a", now=r["window_ends"] + SUBMIT_GRACE_S + 0.1)
     assert view["rounds"][0]["opponent"]["foul"] == "missed"
     assert view["rounds"][0]["winner"] == "you"
+
+
+def test_a_take_still_scoring_holds_the_round_past_the_deadline(match):
+    # Arrived in time, but the scorer was busy: it still counts, and the result pause isn't cut short.
+    arena, duel_id = match
+    r = arena.duel_view(duel_id, "a", now=0)["round"]
+    arena.submit(duel_id, "b", 1, bark(0.3), now=r["window_ends"])
+    arena.take_arrived(duel_id, "a", 1, now=r["deadline"] - 0.1)
+    late = r["deadline"] + 3
+    assert arena.duel_view(duel_id, "b", now=late)["rounds"] == []
+    view = arena.submit(duel_id, "a", 1, bark(0.9), now=late)
+    assert view["rounds"][0]["winner"] == "you"
+    assert view["round"]["starts_at"] == pytest.approx(late + RESULT_S)
+
+
+def test_a_take_arriving_after_the_deadline_is_refused(match):
+    arena, duel_id = match
+    r = arena.duel_view(duel_id, "a", now=0)["round"]
+    # By then the clock has closed round 1 as missed and moved on.
+    with pytest.raises(DuelError, match="Round 1 isn't open"):
+        arena.take_arrived(duel_id, "a", 1, now=r["deadline"] + 0.1)
+
+
+def test_a_take_that_fails_to_score_lets_the_round_close(match):
+    arena, duel_id = match
+    r = arena.duel_view(duel_id, "a", now=0)["round"]
+    arena.take_arrived(duel_id, "a", 1, now=r["window_ends"])
+    with pytest.raises(DuelError, match="already barked"):
+        arena.take_arrived(duel_id, "a", 1, now=r["window_ends"] + 0.1)
+    arena.take_failed(duel_id, "a", 1)
+    view = arena.duel_view(duel_id, "a", now=r["deadline"] + 0.1)
+    assert view["rounds"][0]["you"]["foul"] == "missed"
+
+
+def test_revision_moves_on_barks_resolutions_and_the_end(match):
+    arena, duel_id = match
+    start = arena.advance(duel_id, now=0)
+    assert arena.advance(duel_id, now=1) == start  # countdowns and cues are the screens' job
+    r = arena.duel_view(duel_id, "a", now=0)["round"]
+    arena.submit(duel_id, "a", 1, bark(0.9), now=r["window_ends"])
+    one_in = arena.advance(duel_id, now=r["window_ends"])
+    assert one_in != start
+    assert arena.advance(duel_id, now=r["deadline"] + 0.1) != one_in  # the deadline resolved it
+    arena.forfeit("b", now=r["deadline"] + 1)
+    assert arena.duels[duel_id].ended_at is not None
 
 
 def test_abandoned_duel_ends_in_a_draw(match):

@@ -4,16 +4,22 @@ Public interface (all times are server seconds, passed in so tests control the c
     arena = Arena()
     arena.register(player_id, name, dog) -> Player
     arena.join_queue(player_id, now) / arena.leave_queue(player_id)
+    arena.match(now) -> [Duel, ...]   pair the queue and start those duels (the server calls it ~1/s)
     arena.queue_status(player_id, now) -> {"status": "idle" | "waiting" | "matched", ...}
     arena.duel_view(duel_id, player_id, now) -> what that player's screen shows
+    arena.advance(duel_id, now) -> revision   apply the clock; the revision changes when the duel does
+    arena.take_arrived(duel_id, player_id, round_index, now)   a take is in and being scored
     arena.submit(duel_id, player_id, round_index, bark, now) -> duel_view
+    arena.take_failed(duel_id, player_id, round_index)   scoring it failed: the round can close
     arena.forfeit(player_id, now)   leave an unfinished duel: the opponent wins it
 
 A round, from the server's clock:
     starts_at            3-2-1 countdown begins on both screens
     cue_at               BARK! (a random 0.5-2 s after the countdown, so nobody can time it)
     cue_at + WINDOW_S    the 5 s bark window closes; each client uploads its take to be scored
-    deadline             a take not in by now scores 0 (left, lost connection, never barked)
+    deadline             a take not in by now scores 0 (left, lost connection, never barked).
+                         "In" means arrived: a take that arrived in time holds the round open
+                         while it scores, so a busy scorer can't cost a player the round.
     resolved, then RESULT_S of both scores on screen, then the next round starts
 
 First to two round wins takes the duel. A tied round is replayed; after
@@ -108,6 +114,7 @@ class Round:
     starts_at: float
     cue_at: float
     barks: dict[str, Bark] = field(default_factory=dict)
+    scoring: set[str] = field(default_factory=set)  # players whose take arrived and is being scored
     resolved_at: float | None = None
     winner: str | None = None  # player id, or None for a tie
 
@@ -145,6 +152,11 @@ class Duel:
         a, b = self.players
         return b if player_id == a else a
 
+    def revision(self) -> tuple:
+        """Changes whenever a bark lands, a round resolves or the duel ends: when screens need news.
+        Everything else (countdown, cue, window) the screens work out from the round times."""
+        return len(self.rounds), sum(len(r.barks) for r in self.rounds), self.ended_at
+
 
 class DuelError(Exception):
     """A request the duel can't accept; the message is safe to show the player."""
@@ -180,9 +192,11 @@ class Arena:
     def leave_queue(self, player_id: str) -> None:
         self.queue.leave(player_id)
 
+    def match(self, now: float) -> list["Duel"]:
+        """Pair whoever in the queue can be paired now and start their duels."""
+        return [self._start_duel(a, b, now) for a, b in self.queue.pair(now)]
+
     def queue_status(self, player_id: str, now: float) -> dict:
-        for a, b in self.queue.pair(now):
-            self._start_duel(a, b, now)
         if player_id in self.active:
             return {"status": "matched", "duel_id": self.active[player_id]}
         if player_id in self.queue:
@@ -287,20 +301,32 @@ class Arena:
             }
         return view
 
+    def advance(self, duel_id: str, now: float) -> tuple:
+        """Resolve whatever the clock has settled (a deadline, the bot's bark); returns Duel.revision()."""
+        duel = self.duels[duel_id]
+        self._advance(duel, now)
+        return duel.revision()
+
+    def take_arrived(self, duel_id: str, player_id: str, round_index: int, now: float) -> None:
+        """A take is in. The timing is judged now, on arrival; the round then waits for its score."""
+        self._open_round(duel_id, player_id, round_index, now).scoring.add(player_id)
+
+    def take_failed(self, duel_id: str, player_id: str, round_index: int) -> None:
+        """The take couldn't be scored. Stop holding the round open; it scores 0 at the deadline."""
+        duel = self.duels.get(duel_id)
+        for r in duel.rounds if duel else []:
+            if r.index == round_index:
+                r.scoring.discard(player_id)
+
     def submit(self, duel_id: str, player_id: str, round_index: int, bark: Bark, now: float) -> dict:
+        """Record a scored take. One that already passed take_arrived skips the timing checks."""
         duel = self._duel(duel_id, player_id)
         self._advance(duel, now)
-        if duel.ended_at is not None:
-            raise DuelError("This duel is over.")
         r = duel.current
-        if r.index != round_index:
-            raise DuelError(f"Round {round_index} isn't open; this is round {r.index}.")
-        if now < r.cue_at:
-            raise DuelError("Too early: the bark cue hasn't happened yet.")
-        if now > r.deadline:
-            raise DuelError("Too late: this round has closed.")
-        if player_id in r.barks:
-            raise DuelError("You've already barked this round.")
+        if duel.ended_at is None and r.index == round_index and player_id in r.scoring:
+            r.scoring.discard(player_id)
+        else:
+            r = self._open_round(duel_id, player_id, round_index, now)
         r.barks[player_id] = bark
         self._advance(duel, now)
         return self.duel_view(duel_id, player_id, now)
@@ -320,6 +346,23 @@ class Arena:
         if duel is None or player_id not in duel.players:
             raise DuelError("No such duel for this player.")
         return duel
+
+    def _open_round(self, duel_id: str, player_id: str, round_index: int, now: float) -> Round:
+        """The current round, if this player may bark in it now; otherwise why not."""
+        duel = self._duel(duel_id, player_id)
+        self._advance(duel, now)
+        if duel.ended_at is not None:
+            raise DuelError("This duel is over.")
+        r = duel.current
+        if r.index != round_index:
+            raise DuelError(f"Round {round_index} isn't open; this is round {r.index}.")
+        if now < r.cue_at:
+            raise DuelError("Too early: the bark cue hasn't happened yet.")
+        if now > r.deadline:
+            raise DuelError("Too late: this round has closed.")
+        if player_id in r.barks or player_id in r.scoring:
+            raise DuelError("You've already barked this round.")
+        return r
 
     def _start_duel(self, a: str, b: str, now: float) -> Duel:
         duel = Duel(secrets.token_urlsafe(8), (a, b), now, stage=self._rng.choice(STAGES))
@@ -356,12 +399,14 @@ class Arena:
         r = duel.current
         if duel.bot and now >= r.window_ends and duel.bot not in r.barks:
             r.barks[duel.bot] = self._bot_bark(duel.bot)
-        if now < r.window_ends or (len(r.barks) < 2 and now <= r.deadline):
+        both_in = len(r.barks) == 2
+        # A take still being scored arrived in time, so it holds the round open past the deadline.
+        if now < r.window_ends or (not both_in and (now <= r.deadline or r.scoring)):
             return False
         for pid in duel.players:
             r.barks.setdefault(pid, Bark.missed())
-        # Both in: resolve when the second arrives. Deadline: resolve as of the deadline.
-        resolved_at = r.deadline if now > r.deadline else max(now, r.window_ends)
+        # Both in: resolve when the second arrives (or the window ends). Otherwise as of the deadline.
+        resolved_at = max(now, r.window_ends) if both_in else r.deadline
         a, b = duel.players
         sa, sb = r.barks[a].score, r.barks[b].score
         r.winner = a if sa > sb else b if sb > sa else None

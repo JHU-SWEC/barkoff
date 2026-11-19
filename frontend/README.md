@@ -16,7 +16,8 @@ Vite + React + TypeScript, routed with React Router. See the root README for how
 | `src/maps.ts`, `src/components/Backdrop.tsx` | Duel stages (sidewalk, dog park, vet, Petco, playground), drawn in CSS |
 | `src/components/FaceCutout.tsx` | The player's face from the camera, pixelated, for the dog's head |
 | `src/components/Root.tsx` | Wraps every route: click barks, paw trail, sprite preload |
-| `src/useDuel.ts`, `src/duelApi.ts` | Duel client: queue, polling, server clock sync, round uploads |
+| `src/useDuel.ts`, `src/duelApi.ts` | Duel client: lobby, queue and duel state from the server's pushes; the duel's JSON types; takes encoded for the socket |
+| `src/duelSocket.ts` | The duel socket: hello, reconnect with backoff, server clock sync by ping/pong |
 | `src/player.ts` | Guest duel identity (per tab) and display name |
 | `scripts/sprites.mjs` | Draws the dogs and paw cursors into `public/sprites/` (`node scripts/sprites.mjs`) |
 | `src/useBarkRecorder.ts` | Mic capture: raw constraints, MediaRecorder, live levels, countdown, calibration |

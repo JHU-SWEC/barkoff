@@ -4,6 +4,11 @@ import { defineConfig } from 'vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  // The likeness scorer (backend/server.py) runs separately on port 8000.
-  server: { proxy: { '/api': 'http://localhost:8000' } },
+  // backend/server.py runs separately: scoring over HTTP on 8000, the duel socket on 8001.
+  server: {
+    proxy: {
+      '/api': 'http://localhost:8000',
+      '/ws': { target: 'ws://localhost:8001', ws: true },
+    },
+  },
 })

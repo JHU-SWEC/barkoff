@@ -5,6 +5,7 @@ Public interface:
     Matchmaker().leave(player_id)
     Matchmaker().pair(now) -> [(id_a, id_b), ...]   removes paired players from the queue
     Matchmaker().window(player_id, now) -> current Elo window (+/-)
+    Matchmaker().waiting() -> [player_id, ...]   everyone in the queue, longest-waiting first
 
 Rules:
     - A player's window starts at +/-BASE_WINDOW and grows WIDEN_PER_S per second
@@ -14,8 +15,8 @@ Rules:
     - The longest-waiting player is served first, against the closest eligible
       rating (ties to whoever has waited longer).
 
-No clock or threads of its own: the server calls pair() whenever the queue is
-polled, which is about once a second per waiting player.
+No clock or threads of its own: the realtime server's game loop calls pair()
+about once a second, and right away when someone joins.
 """
 
 from dataclasses import dataclass
@@ -49,6 +50,9 @@ class Matchmaker:
 
     def leave(self, player_id: str) -> None:
         self._queue.pop(player_id, None)
+
+    def waiting(self) -> list[str]:
+        return [t.player_id for t in sorted(self._queue.values(), key=lambda t: t.joined_at)]
 
     def waited(self, player_id: str, now: float) -> float:
         return max(0.0, now - self._queue[player_id].joined_at)
